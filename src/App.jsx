@@ -1,15 +1,13 @@
 import React from 'react'
 import { useState, useEffect } from 'react'
-import Login from './components/Login/Login'
-import Dashboard from './components/dashboard/Dashboard';
+import Login from './Components/Login/Login'
+import Layout from './Components/Layout/Layout'
 
-// Main App Component
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Sahifa yuklanganda token borligini tekshirish
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
 
@@ -48,7 +46,7 @@ function App() {
   return (
     <>
       {user ? (
-        <Dashboard user={user} onLogout={handleLogout} />
+        <Layout user={user} onLogout={handleLogout} />
       ) : (
         <Login onLoginSuccess={handleLoginSuccess} />
       )}
