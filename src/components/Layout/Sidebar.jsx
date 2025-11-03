@@ -1,6 +1,6 @@
 import React from 'react';
 
-function Sidebar({ currentPage, onNavigate, onLogout }) {
+function Sidebar({ currentPage, onNavigate, onLogout, isMobileMenuOpen, onCloseMobileMenu }) {
   const menuItems = [
     { id: 'dashboard', icon: 'ri-home-smile-line', label: 'Bosh sahifa' },
     { id: 'darslar', icon: 'ri-book-open-line', label: 'Darslar' },
@@ -11,17 +11,27 @@ function Sidebar({ currentPage, onNavigate, onLogout }) {
   ];
 
   return (
-    <aside id="layout-menu" className="layout-menu menu-vertical menu">
+    <aside 
+      id="layout-menu" 
+      className={`layout-menu menu-vertical menu bg-menu-theme ${isMobileMenuOpen ? 'menu-show' : ''}`}
+    >
       {/* Logo */}
       <div className="app-brand demo">
-        <a href="javascript:void(0);" className="app-brand-link">
+        <a href="#" className="app-brand-link">
           <span className="app-brand-text demo menu-text fw-semibold ms-2">
             AYM Platform
           </span>
         </a>
 
-        <a href="javascript:void(0);" className="layout-menu-toggle menu-link text-large ms-auto">
-          <i className="ri ri-close-line"></i>
+        <a 
+          href="#" 
+          className="layout-menu-toggle menu-link text-large ms-auto d-block d-xl-none"
+          onClick={(e) => {
+            e.preventDefault();
+            onCloseMobileMenu();
+          }}
+        >
+          <i className="icon-base ri ri-close-line"></i>
         </a>
       </div>
 
@@ -35,9 +45,12 @@ function Sidebar({ currentPage, onNavigate, onLogout }) {
             className={`menu-item ${currentPage === item.id ? 'active' : ''}`}
           >
             <a 
-              href="javascript:void(0);" 
+              href="#" 
               className="menu-link"
-              onClick={() => onNavigate(item.id)}
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate(item.id);
+              }}
             >
               <i className={`menu-icon icon-base ri ${item.icon}`}></i>
               <div>{item.label}</div>
@@ -48,9 +61,12 @@ function Sidebar({ currentPage, onNavigate, onLogout }) {
         {/* Logout */}
         <li className="menu-item mt-5">
           <a 
-            href="javascript:void(0);" 
+            href="#" 
             className="menu-link"
-            onClick={onLogout}
+            onClick={(e) => {
+              e.preventDefault();
+              onLogout();
+            }}
           >
             <i className="menu-icon icon-base ri ri-logout-box-r-line"></i>
             <div>Chiqish</div>

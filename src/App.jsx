@@ -44,20 +44,18 @@ function App() {
   }
 
   return (
-    //  <!-- Layout wrapper -->
-    <div className="layout-wrapper layout-content-navbar  ">
-      <div className="layout-container">
-        {/* <!-- Layout container --> */}
-        <div className="layout-page">
-
-          {user ? (
+    <>
+      {user ? (
+        // Foydalanuvchi tizimda bo'lsa, Layout wrapperlari kerak
+        <div className="layout-wrapper layout-content-navbar">
+          <div className="layout-container">
             <Layout user={user} onLogout={handleLogout} />
-          ) : (
-            <Login onLoginSuccess={handleLoginSuccess} />
-          )}
+          </div>
         </div>
-      </div>
-    </div>
+      ) : (
+        <Login onLoginSuccess={handleLoginSuccess} />
+      )}
+    </>
 
   );
 }

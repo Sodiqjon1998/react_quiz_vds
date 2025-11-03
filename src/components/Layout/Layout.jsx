@@ -7,6 +7,18 @@ import Topshiriqlar from '../Pages/Topshiriqlar';
 
 function Layout({ user, onLogout }) {
     const [currentPage, setCurrentPage] = useState('dashboard');
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // ← YANGI
+
+    // Mobile menu toggle
+    const toggleMobileMenu = () => {
+        setIsMobileMenuOpen(!isMobileMenuOpen);
+    };
+
+    // Sahifa o'zgarganda mobile menu yopiladi
+    const handleNavigate = (page) => {
+        setCurrentPage(page);
+        setIsMobileMenuOpen(false); // Mobile menu yopish
+    };
 
     // Sahifa render qilish
     const renderPage = () => {
@@ -17,7 +29,6 @@ function Layout({ user, onLogout }) {
                 return <Darslar />;
             case 'topshiriqlar':
                 return <Topshiriqlar />;
-            
             default:
                 return <Dashboard user={user} />;
         }
@@ -28,18 +39,31 @@ function Layout({ user, onLogout }) {
             {/* Sidebar */}
             <Sidebar
                 currentPage={currentPage}
-                onNavigate={setCurrentPage}
+                onNavigate={handleNavigate}
                 onLogout={onLogout}
+                isMobileMenuOpen={isMobileMenuOpen}
+                onCloseMobileMenu={() => setIsMobileMenuOpen(false)}
             />
+
+            {/* Overlay (mobile menu ochiq bo'lsa) */}
+            {isMobileMenuOpen && (
+                <div 
+                    className="layout-overlay layout-menu-toggle"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                ></div>
+            )}
 
             {/* Main Content Area */}
             <div className="layout-page">
                 {/* Navbar */}
-                <Navbar user={user} onLogout={onLogout} />
+                <Navbar 
+                    user={user} 
+                    onLogout={onLogout}
+                    onToggleMobileMenu={toggleMobileMenu}
+                />
 
                 {/* Content wrapper */}
                 <div className="content-wrapper">
-                    {/* Content */}
                     <div className="container-xxl flex-grow-1 container-p-y">
                         {renderPage()}
                     </div>
