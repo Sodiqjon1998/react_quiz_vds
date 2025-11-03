@@ -44,13 +44,21 @@ function App() {
   }
 
   return (
-    <>
-      {user ? (
-        <Layout user={user} onLogout={handleLogout} />
-      ) : (
-        <Login onLoginSuccess={handleLoginSuccess} />
-      )}
-    </>
+    //  <!-- Layout wrapper -->
+    <div className="layout-wrapper layout-content-navbar  ">
+      <div className="layout-container">
+        {/* <!-- Layout container --> */}
+        <div className="layout-page">
+
+          {user ? (
+            <Layout user={user} onLogout={handleLogout} />
+          ) : (
+            <Login onLoginSuccess={handleLoginSuccess} />
+          )}
+        </div>
+      </div>
+    </div>
+
   );
 }
 

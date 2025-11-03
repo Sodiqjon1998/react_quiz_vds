@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import Sidebar from './Sidebar';
+import Navbar from './Navbar';
+import Dashboard from '../Dashboard/Dashboard';
 import Darslar from '../Pages/Darslar';
 import Topshiriqlar from '../Pages/Topshiriqlar';
-import Dashboard from '../Dashboard/Dashboard';
-
 
 function Layout({ user, onLogout }) {
     const [currentPage, setCurrentPage] = useState('dashboard');
@@ -17,13 +17,14 @@ function Layout({ user, onLogout }) {
                 return <Darslar />;
             case 'topshiriqlar':
                 return <Topshiriqlar />;
+            
             default:
                 return <Dashboard user={user} />;
         }
     };
 
     return (
-        <div className="flex min-h-screen bg-gray-50">
+        <>
             {/* Sidebar */}
             <Sidebar
                 currentPage={currentPage}
@@ -31,28 +32,33 @@ function Layout({ user, onLogout }) {
                 onLogout={onLogout}
             />
 
-            {/* Main Content */}
-            <div className="flex-1">
-                {/* Header */}
-                <header className="bg-white shadow-sm">
-                    <div className="px-8 py-4 flex justify-between items-center">
-                        <h1 className="text-2xl font-bold text-gray-900">
-                            {currentPage.charAt(0).toUpperCase() + currentPage.slice(1)}
-                        </h1>
-                        <div className="flex items-center gap-3">
-                            <span className="text-gray-700">
-                                Salom, <strong>{user?.username || 'User'}</strong>!
-                            </span>
-                        </div>
-                    </div>
-                </header>
+            {/* Main Content Area */}
+            <div className="layout-page">
+                {/* Navbar */}
+                <Navbar user={user} onLogout={onLogout} />
 
-                {/* Page Content */}
-                <main className="p-8">
-                    {renderPage()}
-                </main>
+                {/* Content wrapper */}
+                <div className="content-wrapper">
+                    {/* Content */}
+                    <div className="container-xxl flex-grow-1 container-p-y">
+                        {renderPage()}
+                    </div>
+
+                    {/* Footer */}
+                    <footer className="content-footer footer bg-footer-theme">
+                        <div className="container-xxl">
+                            <div className="footer-container d-flex align-items-center justify-content-between py-4 flex-md-row flex-column">
+                                <div className="mb-2 mb-md-0">
+                                    © 2024, made with ❤️ by <strong>Andijon Yuksalish Maktabi</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </footer>
+
+                    <div className="content-backdrop fade"></div>
+                </div>
             </div>
-        </div>
+        </>
     );
 }
 

@@ -1,62 +1,65 @@
 function Dashboard({ user }) {
     return (
-        <div>
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg p-8 mb-8 text-white">
-                <h2 className="text-3xl font-bold mb-2">
-                    Xush kelibsiz! 🎉
-                </h2>
-                <p className="text-blue-100 text-lg">
-                    Siz muvaffaqiyatli tizimga kirdingiz.
-                </p>
-            </div>
-
-            {/* User Info Card */}
-            <div className="bg-white rounded-xl shadow-md p-6 mb-8">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                    Foydalanuvchi ma'lumotlari
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                        <p className="text-sm text-gray-500 mb-1">Username</p>
-                        <p className="font-semibold text-gray-900">{user?.name || 'N/A'}</p>
-                    </div>
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                        <p className="text-sm text-gray-500 mb-1">Email</p>
-                        <p className="font-semibold text-gray-900">{user?.email || 'N/A'}</p>
-                    </div>
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                        <p className="text-sm text-gray-500 mb-1">Role</p>
-                        <p className="font-semibold text-gray-900">{user?.role || 'User'}</p>
-                    </div>
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                        <p className="text-sm text-gray-500 mb-1">Status</p>
-                        <p className="font-semibold text-green-600">Active</p>
+        <div className="row g-6">
+            {/* Welcome Card */}
+            <div className="col-md-12 col-xxl-8">
+                <div className="card">
+                    <div className="d-flex align-items-end row">
+                        <div className="col-md-6 order-2 order-md-1">
+                            <div className="card-body">
+                                <h4 className="card-title mb-4">
+                                    Xush kelibsiz, <span className="fw-bold">{user?.name || 'User'}!</span> 🎉
+                                </h4>
+                                <p className="mb-0">Siz muvaffaqiyatli tizimga kirdingiz.</p>
+                                <p>Yangi imkoniyatlarni kashf eting!</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white rounded-xl shadow-md p-6 border-t-4 border-blue-500">
-                    <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-gray-700 font-semibold">Darslar</h4>
-                        <span className="text-3xl">📚</span>
+            {/* Statistics Cards */}
+            <div className="col-xxl-2 col-sm-6">
+                <div className="card h-100">
+                    <div className="card-body">
+                        <div className="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                            <div className="avatar">
+                                <div className="avatar-initial bg-label-primary rounded-3">
+                                    <i className="icon-base ri ri-book-open-line icon-24px"></i>
+                                </div>
+                            </div>
+                            <div className="d-flex align-items-center">
+                                <p className="mb-0 text-success me-1">+22%</p>
+                                <i className="icon-base ri ri-arrow-up-s-line text-success"></i>
+                            </div>
+                        </div>
+                        <div className="card-info mt-5">
+                            <h5 className="mb-1">12</h5>
+                            <p>Darslar</p>
+                        </div>
                     </div>
-                    <p className="text-4xl font-bold text-blue-600">12</p>
                 </div>
-                <div className="bg-white rounded-xl shadow-md p-6 border-t-4 border-green-500">
-                    <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-gray-700 font-semibold">Topshiriqlar</h4>
-                        <span className="text-3xl">✍️</span>
+            </div>
+
+            <div className="col-xxl-2 col-sm-6">
+                <div className="card h-100">
+                    <div className="card-body">
+                        <div className="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                            <div className="avatar">
+                                <div className="avatar-initial bg-label-success rounded-3">
+                                    <i className="icon-base ri ri-file-list-3-line icon-24px"></i>
+                                </div>
+                            </div>
+                            <div className="d-flex align-items-center">
+                                <p className="mb-0 text-success me-1">+38%</p>
+                                <i className="icon-base ri ri-arrow-up-s-line text-success"></i>
+                            </div>
+                        </div>
+                        <div className="card-info mt-5">
+                            <h5 className="mb-1">8</h5>
+                            <p>Topshiriqlar</p>
+                        </div>
                     </div>
-                    <p className="text-4xl font-bold text-green-600">8</p>
-                </div>
-                <div className="bg-white rounded-xl shadow-md p-6 border-t-4 border-purple-500">
-                    <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-gray-700 font-semibold">Natijalar</h4>
-                        <span className="text-3xl">🎯</span>
-                    </div>
-                    <p className="text-4xl font-bold text-purple-600">95%</p>
                 </div>
             </div>
         </div>

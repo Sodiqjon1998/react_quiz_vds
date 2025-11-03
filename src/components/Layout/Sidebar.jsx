@@ -2,51 +2,62 @@ import React from 'react';
 
 function Sidebar({ currentPage, onNavigate, onLogout }) {
   const menuItems = [
-    { id: 'dashboard', icon: '🏠', label: 'Bosh sahifa' },
-    { id: 'darslar', icon: '📚', label: 'Darslar' },
-    { id: 'topshiriqlar', icon: '✍️', label: 'Topshiriqlar' },
-    { id: 'natijalar', icon: '📊', label: 'Natijalar' },
-    { id: 'profil', icon: '👤', label: 'Profil' },
-    { id: 'sozlamalar', icon: '⚙️', label: 'Sozlamalar' },
+    { id: 'dashboard', icon: 'ri-home-smile-line', label: 'Bosh sahifa' },
+    { id: 'darslar', icon: 'ri-book-open-line', label: 'Darslar' },
+    { id: 'topshiriqlar', icon: 'ri-file-list-3-line', label: 'Topshiriqlar' },
+    { id: 'natijalar', icon: 'ri-bar-chart-box-line', label: 'Natijalar' },
+    { id: 'profil', icon: 'ri-user-line', label: 'Profil' },
+    { id: 'sozlamalar', icon: 'ri-settings-4-line', label: 'Sozlamalar' },
   ];
 
   return (
-    <div className="w-64 bg-gradient-to-b from-indigo-900 to-indigo-800 text-white min-h-screen flex flex-col shadow-2xl">
+    <aside id="layout-menu" className="layout-menu menu-vertical menu">
       {/* Logo */}
-      <div className="p-6 border-b border-indigo-700">
-        <h2 className="text-xl font-bold">AYM Platform</h2>
-        <p className="text-indigo-300 text-sm mt-1">Andijon Yuksalish</p>
+      <div className="app-brand demo">
+        <a href="javascript:void(0);" className="app-brand-link">
+          <span className="app-brand-text demo menu-text fw-semibold ms-2">
+            AYM Platform
+          </span>
+        </a>
+
+        <a href="javascript:void(0);" className="layout-menu-toggle menu-link text-large ms-auto">
+          <i className="ri ri-close-line"></i>
+        </a>
       </div>
 
-      {/* Menu Items */}
-      <nav className="flex-1 p-4 space-y-2">
+      <div className="menu-inner-shadow"></div>
+
+      {/* Menu */}
+      <ul className="menu-inner py-1">
         {menuItems.map(item => (
-          <button
-            key={item.id}
-            onClick={() => onNavigate(item.id)}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-              currentPage === item.id
-                ? 'bg-white text-indigo-900 shadow-lg'
-                : 'hover:bg-indigo-700 text-indigo-100'
-            }`}
+          <li 
+            key={item.id} 
+            className={`menu-item ${currentPage === item.id ? 'active' : ''}`}
           >
-            <span className="text-xl">{item.icon}</span>
-            <span className="font-medium">{item.label}</span>
-          </button>
+            <a 
+              href="javascript:void(0);" 
+              className="menu-link"
+              onClick={() => onNavigate(item.id)}
+            >
+              <i className={`menu-icon icon-base ri ${item.icon}`}></i>
+              <div>{item.label}</div>
+            </a>
+          </li>
         ))}
-      </nav>
 
-      {/* Logout Button */}
-      <div className="p-4 border-t border-indigo-700">
-        <button
-          onClick={onLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-red-600 hover:bg-red-700 transition-all"
-        >
-          <span className="text-xl">🚪</span>
-          <span className="font-medium">Chiqish</span>
-        </button>
-      </div>
-    </div>
+        {/* Logout */}
+        <li className="menu-item mt-5">
+          <a 
+            href="javascript:void(0);" 
+            className="menu-link"
+            onClick={onLogout}
+          >
+            <i className="menu-icon icon-base ri ri-logout-box-r-line"></i>
+            <div>Chiqish</div>
+          </a>
+        </li>
+      </ul>
+    </aside>
   );
 }
 
