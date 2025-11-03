@@ -4,6 +4,7 @@ import Navbar from './Navbar';
 import Dashboard from '../Dashboard/Dashboard';
 import Darslar from '../Pages/Darslar';
 import Topshiriqlar from '../Pages/Topshiriqlar';
+import Quiz from '../Quiz/Quiz';
 
 function Layout({ user, onLogout }) {
     const [currentPage, setCurrentPage] = useState('dashboard');
@@ -35,6 +36,8 @@ function Layout({ user, onLogout }) {
                 return <Darslar />;
             case 'topshiriqlar':
                 return <Topshiriqlar />;
+            case 'quiz':
+                return <Quiz />;
             default:
                 return <Dashboard user={user} />;
         }
