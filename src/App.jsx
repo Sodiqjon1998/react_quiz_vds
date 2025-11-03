@@ -37,8 +37,10 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl text-gray-600">Yuklanmoqda...</div>
+      <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Yuklanmoqda...</span>
+        </div>
       </div>
     );
   }
@@ -46,7 +48,7 @@ function App() {
   return (
     <>
       {user ? (
-        // Foydalanuvchi tizimda bo'lsa, Layout wrapperlari kerak
+        // MUHIM: layout-wrapper va layout-content-navbar class'lari
         <div className="layout-wrapper layout-content-navbar">
           <div className="layout-container">
             <Layout user={user} onLogout={handleLogout} />
@@ -56,7 +58,6 @@ function App() {
         <Login onLoginSuccess={handleLoginSuccess} />
       )}
     </>
-
   );
 }
 
