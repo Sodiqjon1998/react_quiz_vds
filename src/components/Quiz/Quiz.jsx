@@ -61,7 +61,7 @@ function Quiz({ subjectId, quizId }) {
 
     const handleSubmit = async () => {
         const token = localStorage.getItem('token');
-        
+
         const answersArray = Object.entries(answers).map(([questionId, optionId]) => ({
             question_id: parseInt(questionId),
             option_id: optionId
@@ -141,7 +141,7 @@ function Quiz({ subjectId, quizId }) {
             ))}
 
             {/* Submit Button */}
-            <button 
+            <button
                 className="btn btn-primary btn-lg w-100"
                 onClick={handleSubmit}
             >
