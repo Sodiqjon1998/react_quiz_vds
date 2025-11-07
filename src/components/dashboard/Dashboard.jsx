@@ -12,14 +12,23 @@ function Dashboard({ user }) {
     const fetchQuizzes = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:8000/api/quizzes', {
+            // 🎯 O'ZGARTIRILDI: API manzili /api/quizzes dan /api/index ga o'zgartirildi
+            const response = await fetch('http://localhost:8000/api/index', {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'application/json'
                 }
             });
 
+            // Agar javob xato (401, 403, 404, 500) bo'lsa, xatolik tashlaymiz
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Server xatosi yoki avtorizatsiya muammosi!');
+            }
+
             const data = await response.json();
+
+
 
             if (data.success) {
                 setQuizzes(data.data.quizzes);
@@ -52,6 +61,7 @@ function Dashboard({ user }) {
         );
     }
 
+    // UI qismi o'zgarishsiz qoldi...
     return (
         <div className="row g-6">
             {/* Welcome Card */}
