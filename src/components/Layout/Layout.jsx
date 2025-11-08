@@ -4,11 +4,12 @@ import Navbar from './Navbar';
 import Dashboard from '../Dashboard/Dashboard';
 import Darslar from '../Pages/Darslar';
 import Topshiriqlar from '../Pages/Topshiriqlar';
-import Quiz from '../Quiz/Quiz';
+import QuizPage from '../Quiz/QuizPage';
 
 function Layout({ user, onLogout }) {
     const [currentPage, setCurrentPage] = useState('dashboard');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [quizParams, setQuizParams] = useState(null);
 
     // Body class boshqarish (menu ochiq/yopiq)
     useEffect(() => {
@@ -19,13 +20,42 @@ function Layout({ user, onLogout }) {
         }
     }, [isMobileMenuOpen]);
 
+    // URL hash orqali navigatsiya
+    useEffect(() => {
+        const handleHashChange = () => {
+            const hash = window.location.hash.slice(1); // "#" ni olib tashlash
+            
+            if (hash.startsWith('quiz/')) {
+                const parts = hash.split('/');
+                if (parts.length === 3) {
+                    const [_, subjectId, quizId] = parts;
+                    setQuizParams({ subjectId, quizId });
+                    setCurrentPage('quiz');
+                }
+            } else if (hash) {
+                setCurrentPage(hash);
+            } else {
+                setCurrentPage('dashboard');
+            }
+        };
+
+        handleHashChange();
+        window.addEventListener('hashchange', handleHashChange);
+        
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    }, []);
+
     const toggleMobileMenu = () => {
         setIsMobileMenuOpen(!isMobileMenuOpen);
     };
 
     const handleNavigate = (page) => {
-        setCurrentPage(page);
+        window.location.hash = page;
         setIsMobileMenuOpen(false);
+    };
+
+    const handleQuizBack = () => {
+        window.location.hash = 'dashboard';
     };
 
     const renderPage = () => {
@@ -37,7 +67,15 @@ function Layout({ user, onLogout }) {
             case 'topshiriqlar':
                 return <Topshiriqlar />;
             case 'quiz':
-                return <Quiz />;
+                return quizParams ? (
+                    <QuizPage 
+                        quizId={quizParams.quizId}
+                        subjectId={quizParams.subjectId}
+                        onBack={handleQuizBack}
+                    />
+                ) : (
+                    <Dashboard user={user} />
+                );
             default:
                 return <Dashboard user={user} />;
         }

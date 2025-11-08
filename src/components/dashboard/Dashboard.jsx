@@ -173,7 +173,7 @@ function Dashboard({ user }) {
                                                         </span>
                                                     </td>
                                                     <td>
-                                                        {quiz.status === 'AVAILABLE' && (
+                                                        {/* {quiz.status === 'AVAILABLE' && ( */}
                                                             <button
                                                                 className="btn btn-sm btn-primary"
                                                                 onClick={() => {
@@ -183,7 +183,7 @@ function Dashboard({ user }) {
                                                             >
                                                                 Boshlash
                                                             </button>
-                                                        )}
+                                                        {/* )} */}
                                                     </td>
                                                 </tr>
                                             );
