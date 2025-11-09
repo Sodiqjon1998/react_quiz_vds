@@ -10,10 +10,12 @@ function QuizPage({ quizId, subjectId, onBack }) {
     const [timeLeft, setTimeLeft] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState(null);
+    
+    // ✨ YANGI: Natijalar uchun state
+    const [showResultModal, setShowResultModal] = useState(false);
+    const [quizResult, setQuizResult] = useState(null);
 
-    // --- 1. LOCAL STORAGE FUNKSIYALARI ---
-
-    // Progressni LocalStorage'ga saqlash
+    // --- LOCAL STORAGE ---
     const saveState = useCallback(() => {
         if (!quizId) return;
         try {
@@ -21,7 +23,6 @@ function QuizPage({ quizId, subjectId, onBack }) {
                 answers: answers,
                 markedForReview: markedForReview,
                 currentQuestionIndex: currentQuestionIndex,
-                // Server vaqti emas, qolgan vaqtni saqlaymiz (agar 0 dan katta bo'lsa)
                 timeLeft: timeLeft > 0 ? timeLeft : 0,
             };
             localStorage.setItem(`quiz_progress_${quizId}`, JSON.stringify(quizState));
@@ -30,25 +31,19 @@ function QuizPage({ quizId, subjectId, onBack }) {
         }
     }, [quizId, answers, markedForReview, currentQuestionIndex, timeLeft]);
 
-    // Progressni o'chirish (faqat test yakunlanganda chaqiriladi)
     const clearState = useCallback(() => {
         if (quizId) {
             localStorage.removeItem(`quiz_progress_${quizId}`);
         }
     }, [quizId]);
 
-    // Javoblarni saqlash uchun useEffect
     useEffect(() => {
-        // Faqat yuklash tugagan bo'lsa va savollar mavjud bo'lsa saqlash
         if (!loading && questions.length > 0) {
             saveState();
         }
     }, [answers, markedForReview, currentQuestionIndex, timeLeft, loading, questions.length, saveState]);
 
-
-    // --- 2. ASOSIY LOGIKA VA API SO'ROVLAR ---
-
-    // Timer
+    // --- TIMER ---
     useEffect(() => {
         if (timeLeft <= 0 || loading || questions.length === 0) return;
 
@@ -70,7 +65,6 @@ function QuizPage({ quizId, subjectId, onBack }) {
         try {
             setLoading(true);
             setError(null);
-            // clearState(); // ❌ BU YERDAN O'CHIRILDI!
 
             const token = localStorage.getItem('token');
             const response = await fetch(`http://localhost:8000/api/quiz/${quizId}/start`, {
@@ -90,41 +84,34 @@ function QuizPage({ quizId, subjectId, onBack }) {
                 setQuiz(data.data.quiz_details);
                 setQuestions(data.data.questions);
 
-                // Vaqtni sekundlarga aylantirish (serverdan kelgan maksimal vaqt)
                 const timeString = data.data.quiz_details.attachment?.time || "00:30:00";
                 const [hours, minutes, seconds] = timeString.split(':').map(Number);
                 const totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
-                setTimeLeft(totalSeconds); // Avval maksimal vaqtni o'rnatamiz
+                setTimeLeft(totalSeconds);
 
-                // 🌟 Saqlangan Javoblarni Tiklash
                 const savedState = localStorage.getItem(`quiz_progress_${quizId}`);
                 if (savedState) {
                     try {
                         const parsedState = JSON.parse(savedState);
-
                         setAnswers(parsedState.answers || {});
                         setMarkedForReview(parsedState.markedForReview || {});
 
-                        // Faqatgina saqlangan holatdagi savol indeksi mavjud savollar oralig'ida bo'lsa tiklash
                         if (parsedState.currentQuestionIndex < data.data.questions.length) {
                             setCurrentQuestionIndex(parsedState.currentQuestionIndex || 0);
                         } else {
                             setCurrentQuestionIndex(0);
                         }
 
-                        // Qolgan vaqtni tiklash
                         if (parsedState.timeLeft > 0) {
                             setTimeLeft(parsedState.timeLeft);
                         }
 
                         console.log("Quiz holati LocalStorage'dan tiklandi.");
-
                     } catch (e) {
                         console.error("Saqlangan progressni yuklashda xatolik:", e);
                         localStorage.removeItem(`quiz_progress_${quizId}`);
                     }
                 }
-                // 🌟 Tiklash tugadi
 
                 setLoading(false);
             }
@@ -141,7 +128,6 @@ function QuizPage({ quizId, subjectId, onBack }) {
         startQuiz();
     }, [quizId]);
 
-
     const handleAnswerSelect = (questionId, optionId) => {
         setAnswers(prev => ({
             ...prev,
@@ -157,7 +143,6 @@ function QuizPage({ quizId, subjectId, onBack }) {
     };
 
     const handleSubmit = async () => {
-        // ... (Qolgan handleSubmit mantig'i o'zgarmadi)
         if (isSubmitting) return;
 
         const unanswered = questions.length - Object.keys(answers).length;
@@ -187,18 +172,11 @@ function QuizPage({ quizId, subjectId, onBack }) {
             const data = await response.json();
 
             if (data.success) {
-                // ✅ Muvaffaqiyatli topshirilgandan keyin LocalStorage'ni tozalash
                 clearState();
-
-                const result = data.data;
-                alert(
-                    `🎉 Quiz yakunlandi!\n\n` +
-                    `✅ To'g'ri javoblar: ${result.score}/${result.total_questions}\n` +
-                    `📊 Foiz: ${result.percentage}%\n` +
-                    `${result.passed ? '✨ Tabriklaymiz! Siz testdan o\'tdingiz!' : '❌ Afsuski, test topshirilmadi (70% kerak edi)'}\n\n` +
-                    `Exam ID: ${result.exam_id}`
-                );
-                if (onBack) onBack();
+                
+                // ✨ YANGI: Natijalarni saqlash va modal ochish
+                setQuizResult(data.data);
+                setShowResultModal(true);
             } else {
                 throw new Error(data.message);
             }
@@ -209,9 +187,6 @@ function QuizPage({ quizId, subjectId, onBack }) {
             setIsSubmitting(false);
         }
     };
-
-    // --- 3. YORDAMCHI FUNKSIYALAR VA UI LOGIKA ---
-    // (Bu qismda o'zgarish yo'q, avvalgidek qoladi)
 
     const formatTime = (seconds) => {
         const h = Math.floor(seconds / 3600);
@@ -229,6 +204,212 @@ function QuizPage({ quizId, subjectId, onBack }) {
         }
         if (answers[questionId]) return 'answered';
         return 'not-answered';
+    };
+
+    // ✨ YANGI: Natijalar Modali
+    const ResultModal = () => {
+        if (!quizResult) return null;
+
+        const { score, total_questions, percentage, passed, detailed_results } = quizResult;
+
+        return (
+            <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
+                <div className="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+                    <div className="modal-content border-0 shadow-lg">
+                        <div className={`modal-header ${passed ? 'bg-success' : 'bg-danger'} text-white border-0`}>
+                            <div className="w-100 text-center">
+                                <h3 className="modal-title mb-2 fw-bold text-white">
+                                    {passed ? (
+                                        <>
+                                            <i className="ri-trophy-line me-2"></i>
+                                            Tabriklaymiz! 🎉
+                                        </>
+                                    ) : (
+                                        <>
+                                            <i className="ri-emotion-sad-line me-2"></i>
+                                            Test yakunlandi
+                                        </>
+                                    )}
+                                </h3>
+                                <p className="mb-0 text-white-50">
+                                    {passed 
+                                        ? "Siz testdan muvaffaqiyatli o'tdingiz!" 
+                                        : 'Keyingi safar omad tilaymiz!'}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="modal-body p-4" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                            <div className="row g-4 mb-4">
+                                <div className="col-md-4">
+                                    <div className="card border-0 bg-primary-subtle h-100">
+                                        <div className="card-body text-center">
+                                            <i className="ri-checkbox-circle-line text-primary mb-3" style={{ fontSize: '3rem' }}></i>
+                                            <h2 className="fw-bold text-primary mb-1">{score}/{total_questions}</h2>
+                                            <p className="text-muted mb-0">To'g'ri javoblar</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="col-md-4">
+                                    <div className="card border-0 bg-warning-subtle h-100">
+                                        <div className="card-body text-center">
+                                            <i className="ri-percent-line text-warning mb-3" style={{ fontSize: '3rem' }}></i>
+                                            <h2 className="fw-bold text-warning mb-1">{percentage}%</h2>
+                                            <p className="text-muted mb-0">Natija</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="col-md-4">
+                                    <div className={`card border-0 ${passed ? 'bg-success-subtle' : 'bg-danger-subtle'} h-100`}>
+                                        <div className="card-body text-center">
+                                            <i className={`${passed ? 'ri-emotion-happy-line text-success' : 'ri-emotion-sad-line text-danger'} mb-3`} 
+                                               style={{ fontSize: '3rem' }}></i>
+                                            <h2 className={`fw-bold ${passed ? 'text-success' : 'text-danger'} mb-1`}>
+                                                {passed ? "O'tdingiz" : 'Topshirilmadi'}
+                                            </h2>
+                                            <p className="text-muted mb-0">
+                                                {passed ? '70% dan yuqori' : '70% kerak edi'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mb-4">
+                                <div className="d-flex justify-content-between mb-2">
+                                    <span className="fw-semibold">To'g'ri javoblar</span>
+                                    <span className="fw-semibold">{score} / {total_questions}</span>
+                                </div>
+                                <div className="progress" style={{ height: '20px' }}>
+                                    <div 
+                                        className={`progress-bar ${passed ? 'bg-success' : 'bg-danger'}`}
+                                        style={{ width: `${percentage}%` }}
+                                    >
+                                        <strong>{percentage}%</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr className="my-4" />
+
+                            <h5 className="mb-3 fw-bold">
+                                <i className="ri-list-check me-2 text-primary"></i>
+                                Batafsil natijalar
+                            </h5>
+
+                            {detailed_results && detailed_results.map((result, index) => {
+                                const question = questions.find(q => q.id === result.question_id);
+                                const letters = ['A', 'B', 'C', 'D'];
+
+                                return (
+                                    <div className={`card mb-3 border-2 ${result.is_correct ? 'border-success' : 'border-danger'}`} key={result.question_id}>
+                                        <div className={`card-header ${result.is_correct ? 'bg-success-subtle' : 'bg-danger-subtle'}`}>
+                                            <div className="d-flex align-items-center justify-content-between">
+                                                <div className="d-flex align-items-center flex-grow-1">
+                                                    <span className={`badge ${result.is_correct ? 'bg-success' : 'bg-danger'} me-3 px-3 py-2`}>
+                                                        {index + 1}
+                                                    </span>
+                                                    <h6 className="mb-0">
+                                                        {question?.name?.replace(/<[^>]*>/g, '').substring(0, 80)}...
+                                                    </h6>
+                                                </div>
+                                                <i className={`${result.is_correct ? 'ri-check-line text-success' : 'ri-close-line text-danger'} fs-3`}></i>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="card-body">
+                                            <div className="mb-3">
+                                                <strong className="d-block mb-2 text-primary">
+                                                    <i className="ri-question-line me-1"></i>Savol:
+                                                </strong>
+                                                <div 
+                                                    className="p-3 bg-light rounded"
+                                                    dangerouslySetInnerHTML={{ __html: question?.name }}
+                                                />
+                                            </div>
+
+                                            {question?.image && (
+                                                <div className="mb-3 text-center">
+                                                    <img 
+                                                        src={question.image} 
+                                                        alt="Savol rasmi"
+                                                        className="img-fluid rounded shadow-sm"
+                                                        style={{ maxHeight: '200px' }}
+                                                    />
+                                                </div>
+                                            )}
+
+                                            <div className="row g-3">
+                                                {question?.options?.map((option, optIdx) => {
+                                                    const isCorrect = option.id === result.correct_option_id;
+                                                    const isSelected = option.id === result.selected_option_id;
+
+                                                    return (
+                                                        <div className="col-md-6" key={option.id}>
+                                                            <div 
+                                                                className={`card ${
+                                                                    isCorrect ? 'border-success border-2 bg-success-subtle' :
+                                                                    isSelected && !isCorrect ? 'border-danger border-2 bg-danger-subtle' :
+                                                                    'border'
+                                                                }`}
+                                                            >
+                                                                <div className="card-body p-3">
+                                                                    <div className="d-flex align-items-start">
+                                                                        <span className={`badge ${
+                                                                            isCorrect ? 'bg-success' :
+                                                                            isSelected ? 'bg-danger' :
+                                                                            'bg-secondary'
+                                                                        } me-2 px-2 py-1`}>
+                                                                            {letters[optIdx]}
+                                                                        </span>
+                                                                        <div className="flex-grow-1">
+                                                                            <div dangerouslySetInnerHTML={{ __html: option.name }} />
+                                                                            {isCorrect && (
+                                                                                <div className="mt-2">
+                                                                                    <span className="badge bg-success">
+                                                                                        <i className="ri-check-line me-1"></i>
+                                                                                        To'g'ri javob
+                                                                                    </span>
+                                                                                </div>
+                                                                            )}
+                                                                            {isSelected && !isCorrect && (
+                                                                                <div className="mt-2">
+                                                                                    <span className="badge bg-danger">
+                                                                                        <i className="ri-close-line me-1"></i>
+                                                                                        Sizning javobingiz
+                                                                                    </span>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        <div className="modal-footer border-0 bg-light">
+                            <button 
+                                className="btn btn-primary btn-lg px-5"
+                                onClick={() => {
+                                    setShowResultModal(false);
+                                    if (onBack) onBack();
+                                }}
+                            >
+                                <i className="ri-arrow-left-line me-2"></i>
+                                Bosh sahifaga qaytish
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
     };
 
     if (loading) {
@@ -259,127 +440,238 @@ function QuizPage({ quizId, subjectId, onBack }) {
     const currentQuestion = questions[currentQuestionIndex];
 
     return (
-        <div className="row g-4">
-            {/* Main Quiz Area */}
-            <div className="col-lg-9">
-                <div className="card shadow-sm border-0">
-                    <div className="card-header d-flex justify-content-between align-items-center bg-primary text-white py-3">
-                        <div>
-                            <h5 className="mb-1 text-white fw-bold">
-                                <i className="ri-questionnaire-line me-2"></i>
-                                Savol {currentQuestionIndex + 1} / {questions.length}
-                            </h5>
-                            <small className="text-white-50">
-                                <i className="ri-book-line me-1"></i>
-                                {quiz?.name} - {quiz?.subject?.name}
-                            </small>
-                        </div>
-                        <div className="d-flex align-items-center gap-3">
-                            <div className="form-check form-switch mb-0">
-                                <input
-                                    className="form-check-input"
-                                    type="checkbox"
-                                    checked={markedForReview[currentQuestion?.id] || false}
-                                    onChange={() => toggleMarkForReview(currentQuestion?.id)}
-                                    id="markReview"
-                                />
-                                <label className="form-check-label text-white" htmlFor="markReview">
-                                    <i className="ri-bookmark-line me-1"></i>
-                                    Ko'rib chiqish uchun belgilash
-                                </label>
-                            </div>
-                        </div>
-                    </div>
+        <>
+            {showResultModal && <ResultModal />}
 
-                    <div className="card-body p-4">
-                        {/* Question Text */}
-                        <div className="mb-4">
-                            <div className="d-flex align-items-start mb-3">
-                                <div className="badge bg-primary me-3 px-3 py-2 fs-6">
-                                    {currentQuestionIndex + 1}
-                                </div>
-                                <h5 className="mb-0 flex-grow-1" dangerouslySetInnerHTML={{ __html: currentQuestion?.name }} />
+            <div className="row g-4">
+                <div className="col-lg-9">
+                    <div className="card shadow-sm border-0">
+                        <div className="card-header d-flex justify-content-between align-items-center bg-primary text-white py-3">
+                            <div>
+                                <h5 className="mb-1 text-white fw-bold">
+                                    <i className="ri-questionnaire-line me-2"></i>
+                                    Savol {currentQuestionIndex + 1} / {questions.length}
+                                </h5>
+                                <small className="text-white-50">
+                                    <i className="ri-book-line me-1"></i>
+                                    {quiz?.name} - {quiz?.subject?.name}
+                                </small>
                             </div>
-
-                            {/* Question Image */}
-                            {currentQuestion?.image && (
-                                <div className="text-center mb-4">
-                                    <img
-                                        src={currentQuestion.image}
-                                        alt="Savol rasmi"
-                                        className="img-fluid rounded shadow-sm"
-                                        style={{ maxWidth: '600px', maxHeight: '400px', objectFit: 'contain' }}
-                                        onError={(e) => {
-                                            e.target.style.display = 'none';
-                                            console.error('Image load error:', currentQuestion.image);
-                                        }}
+                            <div className="d-flex align-items-center gap-3">
+                                <div className="form-check form-switch mb-0">
+                                    <input
+                                        className="form-check-input"
+                                        type="checkbox"
+                                        checked={markedForReview[currentQuestion?.id] || false}
+                                        onChange={() => toggleMarkForReview(currentQuestion?.id)}
+                                        id="markReview"
                                     />
+                                    <label className="form-check-label text-white" htmlFor="markReview">
+                                        <i className="ri-bookmark-line me-1"></i>
+                                        Ko'rib chiqish uchun belgilash
+                                    </label>
                                 </div>
-                            )}
+                            </div>
                         </div>
 
-                        {/* Options */}
-                        <div className="row g-3">
-                            {currentQuestion?.options?.map((option, idx) => {
-                                const isSelected = answers[currentQuestion.id] === option.id;
-                                const letters = ['A', 'B', 'C', 'D'];
+                        <div className="card-body p-4">
+                            <div className="mb-4">
+                                <div className="d-flex align-items-start mb-3">
+                                    <div className="badge bg-primary me-3 px-3 py-2 fs-6">
+                                        {currentQuestionIndex + 1}
+                                    </div>
+                                    <h5 className="mb-0 flex-grow-1" dangerouslySetInnerHTML={{ __html: currentQuestion?.name }} />
+                                </div>
 
-                                return (
-                                    <div className="col-12" key={option.id}>
-                                        <div
-                                            className={`card cursor-pointer h-100 ${isSelected ? 'border-primary border-3 shadow' : 'border'}`}
-                                            onClick={() => handleAnswerSelect(currentQuestion.id, option.id)}
-                                            style={{
-                                                cursor: 'pointer',
-                                                transition: 'all 0.2s',
-                                                backgroundColor: isSelected ? '#f0f7ff' : 'transparent'
+                                {currentQuestion?.image && (
+                                    <div className="text-center mb-4">
+                                        <img
+                                            src={currentQuestion.image}
+                                            alt="Savol rasmi"
+                                            className="img-fluid rounded shadow-sm"
+                                            style={{ maxWidth: '600px', maxHeight: '400px', objectFit: 'contain' }}
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
                                             }}
-                                        >
-                                            <div className="card-body p-3">
-                                                <div className="form-check mb-0 d-flex align-items-start">
-                                                    <input
-                                                        className="form-check-input mt-1 me-3"
-                                                        type="radio"
-                                                        name={`question-${currentQuestion.id}`}
-                                                        id={`option-${option.id}`}
-                                                        checked={isSelected}
-                                                        onChange={() => handleAnswerSelect(currentQuestion.id, option.id)}
-                                                    />
-                                                    <label className="form-check-label fw-semibold w-100" htmlFor={`option-${option.id}`}>
-                                                        <span className={`badge ${isSelected ? 'bg-primary' : 'bg-label-primary'} me-2`}>
-                                                            {letters[idx]}
-                                                        </span>
-                                                        <span dangerouslySetInnerHTML={{ __html: option.name }} />
-                                                    </label>
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="row g-3">
+                                {currentQuestion?.options?.map((option, idx) => {
+                                    const isSelected = answers[currentQuestion.id] === option.id;
+                                    const letters = ['A', 'B', 'C', 'D'];
+
+                                    return (
+                                        <div className="col-12" key={option.id}>
+                                            <div
+                                                className={`card cursor-pointer h-100 ${isSelected ? 'border-primary border-3 shadow' : 'border'}`}
+                                                onClick={() => handleAnswerSelect(currentQuestion.id, option.id)}
+                                                style={{
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    backgroundColor: isSelected ? '#f0f7ff' : 'transparent'
+                                                }}
+                                            >
+                                                <div className="card-body p-3">
+                                                    <div className="form-check mb-0 d-flex align-items-start">
+                                                        <input
+                                                            className="form-check-input mt-1 me-3"
+                                                            type="radio"
+                                                            name={`question-${currentQuestion.id}`}
+                                                            id={`option-${option.id}`}
+                                                            checked={isSelected}
+                                                            onChange={() => handleAnswerSelect(currentQuestion.id, option.id)}
+                                                        />
+                                                        <label className="form-check-label fw-semibold w-100" htmlFor={`option-${option.id}`}>
+                                                            <span className={`badge ${isSelected ? 'bg-primary' : 'bg-label-primary'} me-2`}>
+                                                                {letters[idx]}
+                                                            </span>
+                                                            <span dangerouslySetInnerHTML={{ __html: option.name }} />
+                                                        </label>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="card-footer d-flex justify-content-between align-items-center bg-light py-3">
+                            <button
+                                className="btn btn-secondary btn-lg"
+                                onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
+                                disabled={currentQuestionIndex === 0}
+                            >
+                                <i className="ri-arrow-left-line me-2"></i>
+                                Oldingi
+                            </button>
+
+                            <div className="text-center">
+                                <small className="text-muted">
+                                    {Object.keys(answers).length} / {questions.length} savolga javob berildi
+                                </small>
+                            </div>
+
+                            {currentQuestionIndex === questions.length - 1 ? (
+                                <button
+                                    className="btn btn-success btn-lg"
+                                    onClick={handleSubmit}
+                                    disabled={isSubmitting}
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <span className="spinner-border spinner-border-sm me-2"></span>
+                                            Yuklanmoqda...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <i className="ri-send-plane-fill me-2"></i>
+                                            Yakunlash
+                                        </>
+                                    )}
+                                </button>
+                            ) : (
+                                <button
+                                    className="btn btn-primary btn-lg"
+                                    onClick={() => setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))}
+                                >
+                                    Keyingi
+                                    <i className="ri-arrow-right-line ms-2"></i>
+                                </button>
+                            )}
                         </div>
                     </div>
+                </div>
 
-                    {/* Navigation */}
-                    <div className="card-footer d-flex justify-content-between align-items-center bg-light py-3">
-                        <button
-                            className="btn btn-secondary btn-lg"
-                            onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
-                            disabled={currentQuestionIndex === 0}
-                        >
-                            <i className="ri-arrow-left-line me-2"></i>
-                            Oldingi
-                        </button>
-
-                        <div className="text-center">
-                            <small className="text-muted">
-                                {Object.keys(answers).length} / {questions.length} savolga javob berildi
-                            </small>
+                <div className="col-lg-3">
+                    <div className="card sticky-top shadow-sm border-0" style={{ top: '20px' }}>
+                        <div className="card-header bg-info text-white">
+                            <h6 className="mb-0 text-white fw-bold">
+                                <i className="ri-dashboard-line me-2"></i>
+                                Test Navigatsiyasi
+                            </h6>
                         </div>
+                        <div className="card-body">
+                            <div className={`alert ${timeLeft < 300 ? 'alert-danger' : 'alert-warning'} text-center mb-3 border-0`}>
+                                <i className="ri-time-line fs-5 me-2"></i>
+                                <strong>Qolgan vaqt:</strong>
+                                <h4 className="mb-0 mt-2 fw-bold" style={{ color: timeLeft < 300 ? '#dc3545' : 'inherit' }}>
+                                    {formatTime(timeLeft)}
+                                </h4>
+                            </div>
 
-                        {currentQuestionIndex === questions.length - 1 ? (
+                            <div className="mb-3">
+                                <div className="d-flex justify-content-between mb-2">
+                                    <small className="text-muted">Jarayon</small>
+                                    <small className="text-muted fw-bold">
+                                        {Math.round((Object.keys(answers).length / questions.length) * 100)}%
+                                    </small>
+                                </div>
+                                <div className="progress" style={{ height: '8px' }}>
+                                    <div
+                                        className="progress-bar bg-success"
+                                        style={{ width: `${(Object.keys(answers).length / questions.length) * 100}%` }}
+                                    ></div>
+                                </div>
+                            </div>
+
+                            <hr />
+
+                            <div className="row g-2 mb-3">
+                                {questions.map((_, index) => {
+                                    const status = getQuestionStatus(index);
+                                    let bgClass;
+
+                                    switch (status) {
+                                        case 'answered-marked':
+                                            bgClass = 'bg-warning';
+                                            break;
+                                        case 'answered':
+                                            bgClass = 'bg-success';
+                                            break;
+                                        case 'marked':
+                                            bgClass = 'bg-info';
+                                            break;
+                                        default:
+                                            bgClass = 'bg-secondary';
+                                    }
+
+                                    return (
+                                        <div className="col-3" key={index}>
+                                            <button
+                                                className={`btn ${bgClass} text-white w-100 ${currentQuestionIndex === index ? 'border border-dark border-3 shadow' : ''}`}
+                                                onClick={() => setCurrentQuestionIndex(index)}
+                                                style={{ fontSize: '14px', padding: '8px' }}
+                                            >
+                                                {index + 1}
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="small mb-3">
+                                <div className="d-flex align-items-center mb-2">
+                                    <span className="badge bg-success me-2" style={{ width: '20px', height: '20px' }}></span>
+                                    <span>Javob berilgan ({Object.keys(answers).length})</span>
+                                </div>
+                                <div className="d-flex align-items-center mb-2">
+                                    <span className="badge bg-info me-2" style={{ width: '20px', height: '20px' }}></span>
+                                    <span>Ko'rib chiqish uchun ({Object.keys(markedForReview).filter(k => markedForReview[k]).length})</span>
+                                </div>
+                                <div className="d-flex align-items-center">
+                                    <span className="badge bg-secondary me-2" style={{ width: '20px', height: '20px' }}></span>
+                                    <span>Javob berilmagan ({questions.length - Object.keys(answers).length})</span>
+                                </div>
+                            </div>
+
+                            <hr />
+
                             <button
-                                className="btn btn-success btn-lg"
+                                className="btn btn-danger w-100 btn-lg"
                                 onClick={handleSubmit}
                                 disabled={isSubmitting}
                             >
@@ -391,134 +683,15 @@ function QuizPage({ quizId, subjectId, onBack }) {
                                 ) : (
                                     <>
                                         <i className="ri-send-plane-fill me-2"></i>
-                                        Yakunlash
+                                        Testni Tugatish
                                     </>
                                 )}
                             </button>
-                        ) : (
-                            <button
-                                className="btn btn-primary btn-lg"
-                                onClick={() => setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))}
-                            >
-                                Keyingi
-                                <i className="ri-arrow-right-line ms-2"></i>
-                            </button>
-                        )}
+                        </div>
                     </div>
                 </div>
             </div>
-
-            {/* Sidebar - Navigation */}
-            <div className="col-lg-3">
-                <div className="card sticky-top shadow-sm border-0" style={{ top: '20px' }}>
-                    <div className="card-header bg-info text-white">
-                        <h6 className="mb-0 text-white fw-bold">
-                            <i className="ri-dashboard-line me-2"></i>
-                            Test Navigatsiyasi
-                        </h6>
-                    </div>
-                    <div className="card-body">
-                        {/* Timer */}
-                        <div className={`alert ${timeLeft < 300 ? 'alert-danger' : 'alert-warning'} text-center mb-3 border-0`}>
-                            <i className="ri-time-line fs-5 me-2"></i>
-                            <strong>Qolgan vaqt:</strong>
-                            <h4 className="mb-0 mt-2 fw-bold" style={{ color: timeLeft < 300 ? '#dc3545' : 'inherit' }}>
-                                {formatTime(timeLeft)}
-                            </h4>
-                        </div>
-
-                        {/* Progress */}
-                        <div className="mb-3">
-                            <div className="d-flex justify-content-between mb-2">
-                                <small className="text-muted">Jarayon</small>
-                                <small className="text-muted fw-bold">
-                                    {Math.round((Object.keys(answers).length / questions.length) * 100)}%
-                                </small>
-                            </div>
-                            <div className="progress" style={{ height: '8px' }}>
-                                <div
-                                    className="progress-bar bg-success"
-                                    style={{ width: `${(Object.keys(answers).length / questions.length) * 100}%` }}
-                                ></div>
-                            </div>
-                        </div>
-
-                        <hr />
-
-                        {/* Question Grid */}
-                        <div className="row g-2 mb-3">
-                            {questions.map((_, index) => {
-                                const status = getQuestionStatus(index);
-                                let bgClass;
-
-                                switch (status) {
-                                    case 'answered-marked':
-                                        bgClass = 'bg-warning'; // Javob berilgan va belgilangan
-                                        break;
-                                    case 'answered':
-                                        bgClass = 'bg-success';
-                                        break;
-                                    case 'marked':
-                                        bgClass = 'bg-info'; // Faqat belgilangan
-                                        break;
-                                    default:
-                                        bgClass = 'bg-secondary';
-                                }
-
-                                return (
-                                    <div className="col-3" key={index}>
-                                        <button
-                                            className={`btn ${bgClass} text-white w-100 ${currentQuestionIndex === index ? 'border border-dark border-3 shadow' : ''}`}
-                                            onClick={() => setCurrentQuestionIndex(index)}
-                                            style={{ fontSize: '14px', padding: '8px' }}
-                                        >
-                                            {index + 1}
-                                        </button>
-                                    </div>
-                                );
-                            })}
-                        </div>
-
-                        {/* Legend */}
-                        <div className="small mb-3">
-                            <div className="d-flex align-items-center mb-2">
-                                <span className="badge bg-success me-2" style={{ width: '20px', height: '20px' }}></span>
-                                <span>Javob berilgan ({Object.keys(answers).length})</span>
-                            </div>
-                            <div className="d-flex align-items-center mb-2">
-                                <span className="badge bg-info me-2" style={{ width: '20px', height: '20px' }}></span>
-                                <span>Ko'rib chiqish uchun ({Object.keys(markedForReview).filter(k => markedForReview[k]).length})</span>
-                            </div>
-                            <div className="d-flex align-items-center">
-                                <span className="badge bg-secondary me-2" style={{ width: '20px', height: '20px' }}></span>
-                                <span>Javob berilmagan ({questions.length - Object.keys(answers).length})</span>
-                            </div>
-                        </div>
-
-                        <hr />
-
-                        {/* Submit Button */}
-                        <button
-                            className="btn btn-danger w-100 btn-lg"
-                            onClick={handleSubmit}
-                            disabled={isSubmitting}
-                        >
-                            {isSubmitting ? (
-                                <>
-                                    <span className="spinner-border spinner-border-sm me-2"></span>
-                                    Yuklanmoqda...
-                                </>
-                            ) : (
-                                <>
-                                    <i className="ri-send-plane-fill me-2"></i>
-                                    Testni Tugatish
-                                </>
-                            )}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </>
     );
 }
 
