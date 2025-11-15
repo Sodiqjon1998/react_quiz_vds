@@ -10,12 +10,27 @@ function QuizPage({ quizId, subjectId, onBack }) {
     const [timeLeft, setTimeLeft] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState(null);
-    
-    // ✨ YANGI: Natijalar uchun state
     const [showResultModal, setShowResultModal] = useState(false);
     const [quizResult, setQuizResult] = useState(null);
 
-    // --- LOCAL STORAGE ---
+    // ✅ Rasm URL'ini to'g'rilash funksiyasi
+    const getImageUrl = (imagePath) => {
+        if (!imagePath) return null;
+        
+        // Agar to'liq URL bo'lsa, o'zini qaytaradi
+        if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+            return imagePath;
+        }
+        
+        // Agar storage/ bilan boshlansa
+        if (imagePath.startsWith('storage/')) {
+            return `http://localhost:8000/${imagePath}`;
+        }
+        
+        // Boshqa holatlarda storage/ qo'shadi
+        return `http://localhost:8000/storage/${imagePath}`;
+    };
+
     const saveState = useCallback(() => {
         if (!quizId) return;
         try {
@@ -43,7 +58,6 @@ function QuizPage({ quizId, subjectId, onBack }) {
         }
     }, [answers, markedForReview, currentQuestionIndex, timeLeft, loading, questions.length, saveState]);
 
-    // --- TIMER ---
     useEffect(() => {
         if (timeLeft <= 0 || loading || questions.length === 0) return;
 
@@ -82,7 +96,14 @@ function QuizPage({ quizId, subjectId, onBack }) {
 
             if (data.success) {
                 setQuiz(data.data.quiz_details);
-                setQuestions(data.data.questions);
+                
+                // ✅ Rasmlarni to'g'rilangan holda saqlash
+                const processedQuestions = data.data.questions.map(q => ({
+                    ...q,
+                    image: getImageUrl(q.image)
+                }));
+                
+                setQuestions(processedQuestions);
 
                 const timeString = data.data.quiz_details.attachment?.time || "00:30:00";
                 const [hours, minutes, seconds] = timeString.split(':').map(Number);
@@ -174,7 +195,14 @@ function QuizPage({ quizId, subjectId, onBack }) {
             if (data.success) {
                 clearState();
                 
-                // ✨ YANGI: Natijalarni saqlash va modal ochish
+                // ✅ Natija rasmlarini ham to'g'rilash
+                if (data.data.detailed_results) {
+                    data.data.detailed_results = data.data.detailed_results.map(result => ({
+                        ...result,
+                        question_image: getImageUrl(result.question_image)
+                    }));
+                }
+                
                 setQuizResult(data.data);
                 setShowResultModal(true);
             } else {
@@ -206,7 +234,6 @@ function QuizPage({ quizId, subjectId, onBack }) {
         return 'not-answered';
     };
 
-    // ✨ YANGI: Natijalar Modali
     const ResultModal = () => {
         if (!quizResult) return null;
 
@@ -220,20 +247,14 @@ function QuizPage({ quizId, subjectId, onBack }) {
                             <div className="w-100 text-center">
                                 <h3 className="modal-title mb-2 fw-bold text-white">
                                     {passed ? (
-                                        <>
-                                            <i className="ri-trophy-line me-2"></i>
-                                            Tabriklaymiz! 🎉
-                                        </>
+                                        <>🎉 Tabriklaymiz!</>
                                     ) : (
-                                        <>
-                                            <i className="ri-emotion-sad-line me-2"></i>
-                                            Test yakunlandi
-                                        </>
+                                        <>😔 Test yakunlandi</>
                                     )}
                                 </h3>
                                 <p className="mb-0 text-white-50">
-                                    {passed 
-                                        ? "Siz testdan muvaffaqiyatli o'tdingiz!" 
+                                    {passed
+                                        ? "Siz testdan muvaffaqiyatli o'tdingiz!"
                                         : 'Keyingi safar omad tilaymiz!'}
                                 </p>
                             </div>
@@ -242,28 +263,29 @@ function QuizPage({ quizId, subjectId, onBack }) {
                         <div className="modal-body p-4" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
                             <div className="row g-4 mb-4">
                                 <div className="col-md-4">
-                                    <div className="card border-0 bg-primary-subtle h-100">
+                                    <div className="card border-0 bg-primary bg-opacity-10 h-100">
                                         <div className="card-body text-center">
-                                            <i className="ri-checkbox-circle-line text-primary mb-3" style={{ fontSize: '3rem' }}></i>
+                                            <div className="text-primary mb-3" style={{ fontSize: '3rem' }}>✓</div>
                                             <h2 className="fw-bold text-primary mb-1">{score}/{total_questions}</h2>
                                             <p className="text-muted mb-0">To'g'ri javoblar</p>
                                         </div>
                                     </div>
                                 </div>
                                 <div className="col-md-4">
-                                    <div className="card border-0 bg-warning-subtle h-100">
+                                    <div className="card border-0 bg-warning bg-opacity-10 h-100">
                                         <div className="card-body text-center">
-                                            <i className="ri-percent-line text-warning mb-3" style={{ fontSize: '3rem' }}></i>
+                                            <div className="text-warning mb-3" style={{ fontSize: '3rem' }}>%</div>
                                             <h2 className="fw-bold text-warning mb-1">{percentage}%</h2>
                                             <p className="text-muted mb-0">Natija</p>
                                         </div>
                                     </div>
                                 </div>
                                 <div className="col-md-4">
-                                    <div className={`card border-0 ${passed ? 'bg-success-subtle' : 'bg-danger-subtle'} h-100`}>
+                                    <div className={`card border-0 ${passed ? 'bg-success' : 'bg-danger'} bg-opacity-10 h-100`}>
                                         <div className="card-body text-center">
-                                            <i className={`${passed ? 'ri-emotion-happy-line text-success' : 'ri-emotion-sad-line text-danger'} mb-3`} 
-                                               style={{ fontSize: '3rem' }}></i>
+                                            <div className={`${passed ? 'text-success' : 'text-danger'} mb-3`} style={{ fontSize: '3rem' }}>
+                                                {passed ? '😊' : '😢'}
+                                            </div>
                                             <h2 className={`fw-bold ${passed ? 'text-success' : 'text-danger'} mb-1`}>
                                                 {passed ? "O'tdingiz" : 'Topshirilmadi'}
                                             </h2>
@@ -281,7 +303,7 @@ function QuizPage({ quizId, subjectId, onBack }) {
                                     <span className="fw-semibold">{score} / {total_questions}</span>
                                 </div>
                                 <div className="progress" style={{ height: '20px' }}>
-                                    <div 
+                                    <div
                                         className={`progress-bar ${passed ? 'bg-success' : 'bg-danger'}`}
                                         style={{ width: `${percentage}%` }}
                                     >
@@ -293,8 +315,7 @@ function QuizPage({ quizId, subjectId, onBack }) {
                             <hr className="my-4" />
 
                             <h5 className="mb-3 fw-bold">
-                                <i className="ri-list-check me-2 text-primary"></i>
-                                Batafsil natijalar
+                                📋 Batafsil natijalar
                             </h5>
 
                             {detailed_results && detailed_results.map((result, index) => {
@@ -303,7 +324,7 @@ function QuizPage({ quizId, subjectId, onBack }) {
 
                                 return (
                                     <div className={`card mb-3 border-2 ${result.is_correct ? 'border-success' : 'border-danger'}`} key={result.question_id}>
-                                        <div className={`card-header ${result.is_correct ? 'bg-success-subtle' : 'bg-danger-subtle'}`}>
+                                        <div className={`card-header ${result.is_correct ? 'bg-success bg-opacity-10' : 'bg-danger bg-opacity-10'}`}>
                                             <div className="d-flex align-items-center justify-content-between">
                                                 <div className="d-flex align-items-center flex-grow-1">
                                                     <span className={`badge ${result.is_correct ? 'bg-success' : 'bg-danger'} me-3 px-3 py-2`}>
@@ -313,28 +334,35 @@ function QuizPage({ quizId, subjectId, onBack }) {
                                                         {question?.name?.replace(/<[^>]*>/g, '').substring(0, 80)}...
                                                     </h6>
                                                 </div>
-                                                <i className={`${result.is_correct ? 'ri-check-line text-success' : 'ri-close-line text-danger'} fs-3`}></i>
+                                                <div className={`${result.is_correct ? 'text-success' : 'text-danger'} fs-3`}>
+                                                    {result.is_correct ? '✓' : '✗'}
+                                                </div>
                                             </div>
                                         </div>
-                                        
+
                                         <div className="card-body">
                                             <div className="mb-3">
                                                 <strong className="d-block mb-2 text-primary">
-                                                    <i className="ri-question-line me-1"></i>Savol:
+                                                    ❓ Savol:
                                                 </strong>
-                                                <div 
+                                                <div
                                                     className="p-3 bg-light rounded"
                                                     dangerouslySetInnerHTML={{ __html: question?.name }}
                                                 />
                                             </div>
 
+                                            {/* ✅ Rasm ko'rsatish */}
                                             {question?.image && (
                                                 <div className="mb-3 text-center">
-                                                    <img 
-                                                        src={question.image} 
+                                                    <img
+                                                        src={question.image}
                                                         alt="Savol rasmi"
                                                         className="img-fluid rounded shadow-sm"
-                                                        style={{ maxHeight: '200px' }}
+                                                        style={{ maxHeight: '300px', objectFit: 'contain' }}
+                                                        onError={(e) => {
+                                                            console.error('Rasm yuklanmadi:', question.image);
+                                                            e.target.style.display = 'none';
+                                                        }}
                                                     />
                                                 </div>
                                             )}
@@ -346,20 +374,18 @@ function QuizPage({ quizId, subjectId, onBack }) {
 
                                                     return (
                                                         <div className="col-md-6" key={option.id}>
-                                                            <div 
-                                                                className={`card ${
-                                                                    isCorrect ? 'border-success border-2 bg-success-subtle' :
-                                                                    isSelected && !isCorrect ? 'border-danger border-2 bg-danger-subtle' :
-                                                                    'border'
-                                                                }`}
+                                                            <div
+                                                                className={`card ${isCorrect ? 'border-success border-2 bg-success bg-opacity-10' :
+                                                                        isSelected && !isCorrect ? 'border-danger border-2 bg-danger bg-opacity-10' :
+                                                                            'border'
+                                                                    }`}
                                                             >
                                                                 <div className="card-body p-3">
                                                                     <div className="d-flex align-items-start">
-                                                                        <span className={`badge ${
-                                                                            isCorrect ? 'bg-success' :
-                                                                            isSelected ? 'bg-danger' :
-                                                                            'bg-secondary'
-                                                                        } me-2 px-2 py-1`}>
+                                                                        <span className={`badge ${isCorrect ? 'bg-success' :
+                                                                                isSelected ? 'bg-danger' :
+                                                                                    'bg-secondary'
+                                                                            } me-2 px-2 py-1`}>
                                                                             {letters[optIdx]}
                                                                         </span>
                                                                         <div className="flex-grow-1">
@@ -367,16 +393,14 @@ function QuizPage({ quizId, subjectId, onBack }) {
                                                                             {isCorrect && (
                                                                                 <div className="mt-2">
                                                                                     <span className="badge bg-success">
-                                                                                        <i className="ri-check-line me-1"></i>
-                                                                                        To'g'ri javob
+                                                                                        ✓ To'g'ri javob
                                                                                     </span>
                                                                                 </div>
                                                                             )}
                                                                             {isSelected && !isCorrect && (
                                                                                 <div className="mt-2">
                                                                                     <span className="badge bg-danger">
-                                                                                        <i className="ri-close-line me-1"></i>
-                                                                                        Sizning javobingiz
+                                                                                        ✗ Sizning javobingiz
                                                                                     </span>
                                                                                 </div>
                                                                             )}
@@ -395,15 +419,14 @@ function QuizPage({ quizId, subjectId, onBack }) {
                         </div>
 
                         <div className="modal-footer border-0 bg-light">
-                            <button 
+                            <button
                                 className="btn btn-primary btn-lg px-5"
                                 onClick={() => {
                                     setShowResultModal(false);
                                     if (onBack) onBack();
                                 }}
                             >
-                                <i className="ri-arrow-left-line me-2"></i>
-                                Bosh sahifaga qaytish
+                                ← Bosh sahifaga qaytish
                             </button>
                         </div>
                     </div>
@@ -428,10 +451,10 @@ function QuizPage({ quizId, subjectId, onBack }) {
     if (error) {
         return (
             <div className="alert alert-danger">
-                <h4><i className="ri-error-warning-line me-2"></i>Xatolik</h4>
+                <h4>⚠️ Xatolik</h4>
                 <p>{error}</p>
                 <button className="btn btn-primary" onClick={onBack}>
-                    <i className="ri-arrow-left-line me-1"></i>Orqaga
+                    ← Orqaga
                 </button>
             </div>
         );
@@ -449,12 +472,10 @@ function QuizPage({ quizId, subjectId, onBack }) {
                         <div className="card-header d-flex justify-content-between align-items-center bg-primary text-white py-3">
                             <div>
                                 <h5 className="mb-1 text-white fw-bold">
-                                    <i className="ri-questionnaire-line me-2"></i>
-                                    Savol {currentQuestionIndex + 1} / {questions.length}
+                                    📝 Savol {currentQuestionIndex + 1} / {questions.length}
                                 </h5>
                                 <small className="text-white-50">
-                                    <i className="ri-book-line me-1"></i>
-                                    {quiz?.name} - {quiz?.subject?.name}
+                                    📚 {quiz?.name} - {quiz?.subject?.name}
                                 </small>
                             </div>
                             <div className="d-flex align-items-center gap-3">
@@ -467,8 +488,7 @@ function QuizPage({ quizId, subjectId, onBack }) {
                                         id="markReview"
                                     />
                                     <label className="form-check-label text-white" htmlFor="markReview">
-                                        <i className="ri-bookmark-line me-1"></i>
-                                        Ko'rib chiqish uchun belgilash
+                                        🔖 Ko'rib chiqish uchun belgilash
                                     </label>
                                 </div>
                             </div>
@@ -483,15 +503,30 @@ function QuizPage({ quizId, subjectId, onBack }) {
                                     <h5 className="mb-0 flex-grow-1" dangerouslySetInnerHTML={{ __html: currentQuestion?.name }} />
                                 </div>
 
+                                {/* ✅ Rasm ko'rsatish - Yaxshilangan */}
                                 {currentQuestion?.image && (
                                     <div className="text-center mb-4">
                                         <img
                                             src={currentQuestion.image}
                                             alt="Savol rasmi"
                                             className="img-fluid rounded shadow-sm"
-                                            style={{ maxWidth: '600px', maxHeight: '400px', objectFit: 'contain' }}
+                                            style={{ 
+                                                maxWidth: '100%', 
+                                                maxHeight: '400px', 
+                                                objectFit: 'contain',
+                                                border: '2px solid #e0e0e0',
+                                                padding: '10px',
+                                                backgroundColor: '#f8f9fa'
+                                            }}
                                             onError={(e) => {
+                                                console.error('Rasm yuklanmadi:', currentQuestion.image);
                                                 e.target.style.display = 'none';
+                                                e.target.insertAdjacentHTML('afterend', 
+                                                    '<div class="alert alert-warning">⚠️ Rasm yuklanmadi</div>'
+                                                );
+                                            }}
+                                            onLoad={() => {
+                                                console.log('Rasm muvaffaqiyatli yuklandi:', currentQuestion.image);
                                             }}
                                         />
                                     </div>
@@ -525,7 +560,7 @@ function QuizPage({ quizId, subjectId, onBack }) {
                                                             onChange={() => handleAnswerSelect(currentQuestion.id, option.id)}
                                                         />
                                                         <label className="form-check-label fw-semibold w-100" htmlFor={`option-${option.id}`}>
-                                                            <span className={`badge ${isSelected ? 'bg-primary' : 'bg-label-primary'} me-2`}>
+                                                            <span className={`badge ${isSelected ? 'bg-primary' : 'bg-secondary'} me-2`}>
                                                                 {letters[idx]}
                                                             </span>
                                                             <span dangerouslySetInnerHTML={{ __html: option.name }} />
@@ -545,8 +580,7 @@ function QuizPage({ quizId, subjectId, onBack }) {
                                 onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
                                 disabled={currentQuestionIndex === 0}
                             >
-                                <i className="ri-arrow-left-line me-2"></i>
-                                Oldingi
+                                ← Oldingi
                             </button>
 
                             <div className="text-center">
@@ -567,10 +601,7 @@ function QuizPage({ quizId, subjectId, onBack }) {
                                             Yuklanmoqda...
                                         </>
                                     ) : (
-                                        <>
-                                            <i className="ri-send-plane-fill me-2"></i>
-                                            Yakunlash
-                                        </>
+                                        <>✉️ Yakunlash</>
                                     )}
                                 </button>
                             ) : (
@@ -578,8 +609,7 @@ function QuizPage({ quizId, subjectId, onBack }) {
                                     className="btn btn-primary btn-lg"
                                     onClick={() => setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))}
                                 >
-                                    Keyingi
-                                    <i className="ri-arrow-right-line ms-2"></i>
+                                    Keyingi →
                                 </button>
                             )}
                         </div>
@@ -590,14 +620,12 @@ function QuizPage({ quizId, subjectId, onBack }) {
                     <div className="card sticky-top shadow-sm border-0" style={{ top: '20px' }}>
                         <div className="card-header bg-info text-white">
                             <h6 className="mb-0 text-white fw-bold">
-                                <i className="ri-dashboard-line me-2"></i>
-                                Test Navigatsiyasi
+                                📊 Test Navigatsiyasi
                             </h6>
                         </div>
                         <div className="card-body">
                             <div className={`alert ${timeLeft < 300 ? 'alert-danger' : 'alert-warning'} text-center mb-3 border-0`}>
-                                <i className="ri-time-line fs-5 me-2"></i>
-                                <strong>Qolgan vaqt:</strong>
+                                ⏱️ <strong>Qolgan vaqt:</strong>
                                 <h4 className="mb-0 mt-2 fw-bold" style={{ color: timeLeft < 300 ? '#dc3545' : 'inherit' }}>
                                     {formatTime(timeLeft)}
                                 </h4>
@@ -681,10 +709,7 @@ function QuizPage({ quizId, subjectId, onBack }) {
                                         Yuklanmoqda...
                                     </>
                                 ) : (
-                                    <>
-                                        <i className="ri-send-plane-fill me-2"></i>
-                                        Testni Tugatish
-                                    </>
+                                    <>🏁 Testni Tugatish</>
                                 )}
                             </button>
                         </div>

@@ -5,6 +5,8 @@ import Dashboard from '../Dashboard/Dashboard';
 import Darslar from '../Pages/Darslar';
 import Topshiriqlar from '../Pages/Topshiriqlar';
 import QuizPage from '../Quiz/QuizPage';
+import Kitobxonlik from '../Pages/Kitobxonlik';
+import KunlikVazifalar from '../Pages/KunlikVazifalar';
 
 function Layout({ user, onLogout }) {
     const [currentPage, setCurrentPage] = useState('dashboard');
@@ -66,6 +68,10 @@ function Layout({ user, onLogout }) {
                 return <Darslar />;
             case 'topshiriqlar':
                 return <Topshiriqlar />;
+            case 'kitobxonlik':
+                return <Kitobxonlik />;
+            case 'vazifalar':
+                return <KunlikVazifalar />;
             case 'quiz':
                 return quizParams ? (
                     <QuizPage 
