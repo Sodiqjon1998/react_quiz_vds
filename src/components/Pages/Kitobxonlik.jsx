@@ -8,38 +8,39 @@ function Kitobxonlik() {
     const [selectedFile, setSelectedFile] = useState(null);
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-    const [error, setError] = useState(null);
-
-    // Mikrofon state'lari
     const [isRecording, setIsRecording] = useState(false);
     const [recordedBlob, setRecordedBlob] = useState(null);
     const [recordingTime, setRecordingTime] = useState(0);
     const [mediaRecorder, setMediaRecorder] = useState(null);
-    const [audioChunks, setAudioChunks] = useState([]);
+    const [showMicTab, setShowMicTab] = useState(false);
 
     useEffect(() => {
         fetchReadings();
     }, [selectedMonth, selectedYear]);
 
-    // Timer for recording
     useEffect(() => {
         let interval;
         if (isRecording) {
             interval = setInterval(() => {
                 setRecordingTime(prev => prev + 1);
             }, 1000);
-        } else {
-            setRecordingTime(0);
         }
-        return () => clearInterval(interval);
+        // Recording to'xtaganda timer to'xtatiladi, lekin vaqt saqlanadi
+        return () => {
+            if (interval) clearInterval(interval);
+        };
     }, [isRecording]);
 
     const fetchReadings = async () => {
         try {
             setLoading(true);
-            setError(null);
-
             const token = localStorage.getItem('token');
+            
+            if (!token) {
+                setLoading(false);
+                return;
+            }
+
             const response = await fetch(
                 `http://localhost:8000/api/readings?month=${selectedMonth + 1}&year=${selectedYear}`,
                 {
@@ -56,11 +57,10 @@ function Kitobxonlik() {
                 setRecordings(data.data.recordings);
                 setStatistics(data.data.statistics);
             } else {
-                throw new Error(data.message);
+                console.error('API Error:', data.message);
             }
         } catch (err) {
             console.error('Fetch error:', err);
-            setError(err.message);
         } finally {
             setLoading(false);
         }
@@ -68,30 +68,21 @@ function Kitobxonlik() {
 
     const handleFileSelect = (event) => {
         const file = event.target.files[0];
-        
         if (!file) return;
-
-        // Audio fayl ekanligini tekshirish
         if (!file.type.startsWith('audio/')) {
             alert('Faqat audio fayllarni yuklash mumkin!');
             return;
         }
-
-        // Fayl hajmini tekshirish (max 50MB)
         if (file.size > 50 * 1024 * 1024) {
             alert('Fayl hajmi 50MB dan oshmasligi kerak!');
             return;
         }
-
         setSelectedFile(file);
     };
 
     const handleUpload = async () => {
-        if (!selectedFile) {
-            alert('Iltimos, audio fayl tanlang!');
-            return;
-        }
-
+        if (!selectedFile) return;
+        
         setUploading(true);
 
         try {
@@ -113,20 +104,18 @@ function Kitobxonlik() {
             if (data.success) {
                 alert('✅ Audio muvaffaqiyatli yuklandi!');
                 setSelectedFile(null);
-                document.getElementById('audioInput').value = '';
                 fetchReadings();
             } else {
-                throw new Error(data.message);
+                alert('❌ Xatolik: ' + data.message);
             }
         } catch (err) {
             console.error('Upload error:', err);
-            alert('❌ Xatolik: ' + err.message);
+            alert('❌ Xatolik yuz berdi!');
         } finally {
             setUploading(false);
         }
     };
 
-    // Mikrofon funksiyalari
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -134,9 +123,7 @@ function Kitobxonlik() {
             const chunks = [];
 
             recorder.ondataavailable = (e) => {
-                if (e.data.size > 0) {
-                    chunks.push(e.data);
-                }
+                if (e.data.size > 0) chunks.push(e.data);
             };
 
             recorder.onstop = () => {
@@ -147,12 +134,9 @@ function Kitobxonlik() {
 
             recorder.start();
             setMediaRecorder(recorder);
-            setAudioChunks(chunks);
             setIsRecording(true);
-            setRecordingTime(0);
         } catch (err) {
-            console.error('Mikrofon xatosi:', err);
-            alert('❌ Mikrofonni yoqishda xatolik! Brauzer ruxsat berishini tekshiring.');
+            alert('❌ Mikrofonni yoqishda xatolik!');
         }
     };
 
@@ -160,29 +144,12 @@ function Kitobxonlik() {
         if (mediaRecorder && isRecording) {
             mediaRecorder.stop();
             setIsRecording(false);
+            // Recording time ni saqlab qolish
         }
-    };
-
-    const cancelRecording = () => {
-        if (mediaRecorder && isRecording) {
-            mediaRecorder.stop();
-            setIsRecording(false);
-        }
-        setRecordedBlob(null);
-        setRecordingTime(0);
-    };
-
-    const handleRecordAgain = () => {
-        setRecordedBlob(null);
-        setRecordingTime(0);
-        startRecording();
     };
 
     const handleUploadRecording = async () => {
-        if (!recordedBlob) {
-            alert('Iltimos, avval audio yozing!');
-            return;
-        }
+        if (!recordedBlob) return;
 
         setUploading(true);
 
@@ -216,38 +183,27 @@ function Kitobxonlik() {
                 setRecordingTime(0);
                 fetchReadings();
             } else {
-                throw new Error(data.message);
+                alert('❌ Xatolik: ' + data.message);
             }
         } catch (err) {
             console.error('Upload error:', err);
-            alert('❌ Xatolik: ' + err.message);
+            alert('❌ Xatolik yuz berdi!');
         } finally {
             setUploading(false);
         }
     };
 
-    const formatRecordingTime = (seconds) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    };
-
-    const formatDuration = (seconds) => {
+    const formatTime = (seconds) => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
     const formatFileSize = (bytes) => {
-        if (bytes < 1024 * 1024) {
-            return `${(bytes / 1024).toFixed(1)} KB`;
-        }
-        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+        return bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     };
 
-    const getDaysInMonth = (month, year) => {
-        return new Date(year, month + 1, 0).getDate();
-    };
+    const getDaysInMonth = (month, year) => new Date(year, month + 1, 0).getDate();
 
     const getCalendarData = () => {
         const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
@@ -256,356 +212,446 @@ function Kitobxonlik() {
         
         const days = [];
         for (let day = 1; day <= daysInMonth; day++) {
+            // Realda yuklangan kunlarni tekshirish
             const hasRecording = recordings.some(r => {
                 const recordDate = new Date(r.created_at);
-                return recordDate.getDate() === day;
+                return recordDate.getDate() === day &&
+                       recordDate.getMonth() === selectedMonth &&
+                       recordDate.getFullYear() === selectedYear;
             });
 
             const isPast = isCurrentMonth ? day <= today.getDate() : true;
             const isFuture = isCurrentMonth ? day > today.getDate() : false;
-
-            days.push({
-                day,
-                hasRecording,
-                isPast,
-                isFuture
-            });
+            days.push({ day, hasRecording, isPast, isFuture });
         }
         return days;
     };
 
-    const months = [
-        'Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun',
-        'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'
-    ];
+    const months = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'];
 
     if (loading) {
         return (
-            <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
-                <div className="text-center">
-                    <div className="spinner-border text-primary mb-3" style={{ width: '3rem', height: '3rem' }}>
-                        <span className="visually-hidden">Yuklanmoqda...</span>
-                    </div>
-                    <h5 className="text-muted">Ma'lumotlar yuklanmoqda...</h5>
+            <div style={{ 
+                minHeight: '100vh', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                background: '#f8f9fa'
+            }}>
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{
+                        width: '50px',
+                        height: '50px',
+                        border: '4px solid #e0e0e0',
+                        borderTop: '4px solid #1a73e8',
+                        borderRadius: '50%',
+                        margin: '0 auto 1rem',
+                        animation: 'spin 1s linear infinite'
+                    }}></div>
+                    <p style={{ color: '#5f6368' }}>Yuklanmoqda...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="row g-4">
-            {/* Header */}
-            <div className="col-12">
-                <div className="card border-0 shadow-sm bg-gradient-primary text-white">
-                    <div className="card-body p-4">
-                        <div className="d-flex align-items-center justify-content-between">
-                            <div>
-                                <h3 className="text-white mb-2">
-                                    <i className="ri-book-read-line me-2"></i>
-                                    Kitobxonlik
-                                </h3>
-                                <p className="text-white-50 mb-0">
-                                    Har kuni kitob o'qib audio yuklang va taraqqiyotingizni kuzating
-                                </p>
-                            </div>
-                            <div className="text-end">
-                                <div className="avatar avatar-xl bg-white rounded-circle d-flex align-items-center justify-content-center">
-                                    <i className="ri-mic-line text-primary" style={{ fontSize: '2rem' }}></i>
-                                </div>
-                            </div>
+        <div style={{ 
+            minHeight: '100vh', 
+            background: '#f8f9fa',
+            padding: '20px'
+        }}>
+            <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+                {/* Header */}
+                <div style={{
+                    background: 'white',
+                    borderRadius: '8px',
+                    padding: '24px',
+                    marginBottom: '20px',
+                    boxShadow: '0 1px 3px rgba(60,64,67,0.3)'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                            <h1 style={{ 
+                                fontSize: '28px', 
+                                fontWeight: '400', 
+                                color: '#202124',
+                                margin: '0 0 8px 0'
+                            }}>
+                                📚 Kitobxonlik
+                            </h1>
+                            <p style={{ color: '#5f6368', margin: 0, fontSize: '14px' }}>
+                                Har kuni kitob o'qib audio yuklang va taraqqiyotingizni kuzating
+                            </p>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Statistics Cards */}
-            <div className="col-md-3">
-                <div className="card h-100 border-0 shadow-sm">
-                    <div className="card-body">
-                        <div className="d-flex justify-content-between align-items-start">
-                            <div className="avatar bg-label-success rounded-3">
-                                <i className="ri-calendar-check-line icon-24px"></i>
-                            </div>
+                {/* Statistics */}
+                <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+                    gap: '16px',
+                    marginBottom: '20px'
+                }}>
+                    <div style={{
+                        background: 'white',
+                        borderRadius: '8px',
+                        padding: '20px',
+                        boxShadow: '0 1px 3px rgba(60,64,67,0.3)',
+                        borderLeft: '4px solid #34a853'
+                    }}>
+                        <div style={{ fontSize: '32px', fontWeight: '500', color: '#34a853', marginBottom: '8px' }}>
+                            {statistics?.completed_days || 0}
                         </div>
-                        <div className="card-info mt-4">
-                            <h4 className="mb-1 text-success">{statistics?.completed_days || 0}</h4>
-                            <p className="mb-0 text-muted">Yuklangan kunlar</p>
+                        <div style={{ fontSize: '14px', color: '#5f6368' }}>Yuklangan kunlar</div>
+                    </div>
+
+                    <div style={{
+                        background: 'white',
+                        borderRadius: '8px',
+                        padding: '20px',
+                        boxShadow: '0 1px 3px rgba(60,64,67,0.3)',
+                        borderLeft: '4px solid #ea4335'
+                    }}>
+                        <div style={{ fontSize: '32px', fontWeight: '500', color: '#ea4335', marginBottom: '8px' }}>
+                            {statistics?.missed_days || 0}
                         </div>
+                        <div style={{ fontSize: '14px', color: '#5f6368' }}>O'tkazilgan kunlar</div>
+                    </div>
+
+                    <div style={{
+                        background: 'white',
+                        borderRadius: '8px',
+                        padding: '20px',
+                        boxShadow: '0 1px 3px rgba(60,64,67,0.3)',
+                        borderLeft: '4px solid #1a73e8'
+                    }}>
+                        <div style={{ fontSize: '32px', fontWeight: '500', color: '#1a73e8', marginBottom: '8px' }}>
+                            {statistics?.total_duration || '00:00'}
+                        </div>
+                        <div style={{ fontSize: '14px', color: '#5f6368' }}>Jami vaqt</div>
+                    </div>
+
+                    <div style={{
+                        background: 'white',
+                        borderRadius: '8px',
+                        padding: '20px',
+                        boxShadow: '0 1px 3px rgba(60,64,67,0.3)',
+                        borderLeft: '4px solid #fbbc04'
+                    }}>
+                        <div style={{ fontSize: '32px', fontWeight: '500', color: '#fbbc04', marginBottom: '8px' }}>
+                            {statistics?.completion_rate || 0}%
+                        </div>
+                        <div style={{ fontSize: '14px', color: '#5f6368' }}>To'liqlik darajasi</div>
                     </div>
                 </div>
-            </div>
 
-            <div className="col-md-3">
-                <div className="card h-100 border-0 shadow-sm">
-                    <div className="card-body">
-                        <div className="d-flex justify-content-between align-items-start">
-                            <div className="avatar bg-label-danger rounded-3">
-                                <i className="ri-calendar-close-line icon-24px"></i>
-                            </div>
-                        </div>
-                        <div className="card-info mt-4">
-                            <h4 className="mb-1 text-danger">{statistics?.missed_days || 0}</h4>
-                            <p className="mb-0 text-muted">O'tkazilgan kunlar</p>
-                        </div>
+                {/* Upload Section */}
+                <div style={{
+                    background: 'white',
+                    borderRadius: '8px',
+                    padding: '24px',
+                    marginBottom: '20px',
+                    boxShadow: '0 1px 3px rgba(60,64,67,0.3)'
+                }}>
+                    <h2 style={{ 
+                        fontSize: '18px', 
+                        fontWeight: '500', 
+                        color: '#202124',
+                        marginBottom: '20px'
+                    }}>
+                        Bugungi kitob o'qishni yuklash
+                    </h2>
+
+                    {/* Tabs */}
+                    <div style={{ 
+                        display: 'flex', 
+                        gap: '8px',
+                        borderBottom: '1px solid #dadce0',
+                        marginBottom: '24px'
+                    }}>
+                        <button
+                            onClick={() => setShowMicTab(false)}
+                            style={{
+                                padding: '12px 16px',
+                                background: 'none',
+                                border: 'none',
+                                borderBottom: !showMicTab ? '2px solid #1a73e8' : '2px solid transparent',
+                                color: !showMicTab ? '#1a73e8' : '#5f6368',
+                                cursor: 'pointer',
+                                fontWeight: '500',
+                                fontSize: '14px'
+                            }}
+                        >
+                            📁 Fayl yuklash
+                        </button>
+                        <button
+                            onClick={() => setShowMicTab(true)}
+                            style={{
+                                padding: '12px 16px',
+                                background: 'none',
+                                border: 'none',
+                                borderBottom: showMicTab ? '2px solid #1a73e8' : '2px solid transparent',
+                                color: showMicTab ? '#1a73e8' : '#5f6368',
+                                cursor: 'pointer',
+                                fontWeight: '500',
+                                fontSize: '14px'
+                            }}
+                        >
+                            🎤 Mikrofon
+                        </button>
                     </div>
-                </div>
-            </div>
 
-            <div className="col-md-3">
-                <div className="card h-100 border-0 shadow-sm">
-                    <div className="card-body">
-                        <div className="d-flex justify-content-between align-items-start">
-                            <div className="avatar bg-label-primary rounded-3">
-                                <i className="ri-time-line icon-24px"></i>
-                            </div>
-                        </div>
-                        <div className="card-info mt-4">
-                            <h4 className="mb-1 text-primary">{statistics?.total_duration || '00:00'}</h4>
-                            <p className="mb-0 text-muted">Jami vaqt</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                    {/* File Upload */}
+                    {!showMicTab && (
+                        <div>
+                            <label style={{ 
+                                display: 'block', 
+                                marginBottom: '8px', 
+                                fontSize: '14px', 
+                                color: '#5f6368' 
+                            }}>
+                                Audio fayl tanlash
+                            </label>
+                            <input
+                                type="file"
+                                accept="audio/*"
+                                onChange={handleFileSelect}
+                                disabled={uploading}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    border: '1px solid #dadce0',
+                                    borderRadius: '4px',
+                                    fontSize: '14px',
+                                    marginBottom: '12px'
+                                }}
+                            />
+                            <p style={{ fontSize: '12px', color: '#5f6368', margin: '0 0 16px 0' }}>
+                                MP3, WAV, OGG formatlarida, maksimal 50MB
+                            </p>
 
-            <div className="col-md-3">
-                <div className="card h-100 border-0 shadow-sm">
-                    <div className="card-body">
-                        <div className="d-flex justify-content-between align-items-start">
-                            <div className="avatar bg-label-info rounded-3">
-                                <i className="ri-percent-line icon-24px"></i>
-                            </div>
-                        </div>
-                        <div className="card-info mt-4">
-                            <h4 className="mb-1 text-info">{statistics?.completion_rate || 0}%</h4>
-                            <p className="mb-0 text-muted">To'liqlik darajasi</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Upload Section */}
-            <div className="col-12">
-                <div className="card border-0 shadow-sm">
-                    <div className="card-header bg-light">
-                        <h5 className="mb-0">
-                            <i className="ri-mic-line me-2"></i>
-                            Bugungi kitob o'qishni yuklash
-                        </h5>
-                    </div>
-                    <div className="card-body p-4">
-                        {/* Tabs - Fayl yoki Mikrofon */}
-                        <ul className="nav nav-pills mb-4" role="tablist">
-                            <li className="nav-item" role="presentation">
-                                <button
-                                    className={`nav-link ${!isRecording && !recordedBlob ? 'active' : ''}`}
-                                    onClick={() => {
-                                        setIsRecording(false);
-                                        setRecordedBlob(null);
-                                        setRecordingTime(0);
-                                    }}
-                                    type="button"
-                                >
-                                    <i className="ri-folder-music-line me-2"></i>
-                                    Fayl yuklash
-                                </button>
-                            </li>
-                            <li className="nav-item ms-2" role="presentation">
-                                <button
-                                    className={`nav-link ${isRecording || recordedBlob ? 'active' : ''}`}
-                                    onClick={() => setSelectedFile(null)}
-                                    type="button"
-                                >
-                                    <i className="ri-mic-line me-2"></i>
-                                    Mikrofon orqali yozish
-                                </button>
-                            </li>
-                        </ul>
-
-                        {/* Fayl yuklash */}
-                        {!isRecording && !recordedBlob && (
-                            <div className="row g-3 align-items-end">
-                                <div className="col-md-8">
-                                    <label className="form-label fw-semibold">
-                                        <i className="ri-file-music-line me-1"></i>
-                                        Audio fayl tanlash
-                                    </label>
-                                    <input
-                                        type="file"
-                                        className="form-control form-control-lg"
-                                        id="audioInput"
-                                        accept="audio/*"
-                                        onChange={handleFileSelect}
-                                        disabled={uploading}
-                                    />
-                                    <small className="text-muted">
-                                        <i className="ri-information-line me-1"></i>
-                                        MP3, WAV, OGG formatlarida, maksimal 50MB
-                                    </small>
-
-                                    {selectedFile && (
-                                        <div className="alert alert-info mt-3 mb-0">
-                                            <div className="d-flex align-items-center">
-                                                <i className="ri-file-music-line fs-3 me-3"></i>
-                                                <div className="flex-grow-1">
-                                                    <strong>{selectedFile.name}</strong>
-                                                    <br />
-                                                    <small>Hajm: {formatFileSize(selectedFile.size)}</small>
-                                                </div>
-                                            </div>
+                            {selectedFile && (
+                                <div style={{
+                                    background: '#e8f0fe',
+                                    padding: '16px',
+                                    borderRadius: '8px',
+                                    marginBottom: '16px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '12px'
+                                }}>
+                                    <div style={{ fontSize: '32px' }}>🎵</div>
+                                    <div>
+                                        <div style={{ fontWeight: '500', color: '#202124' }}>{selectedFile.name}</div>
+                                        <div style={{ fontSize: '12px', color: '#5f6368' }}>
+                                            Hajm: {formatFileSize(selectedFile.size)}
                                         </div>
-                                    )}
+                                    </div>
                                 </div>
+                            )}
 
-                                <div className="col-md-4">
+                            <button
+                                onClick={handleUpload}
+                                disabled={!selectedFile || uploading}
+                                style={{
+                                    background: selectedFile && !uploading ? '#1a73e8' : '#dadce0',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '12px 24px',
+                                    borderRadius: '4px',
+                                    cursor: selectedFile && !uploading ? 'pointer' : 'not-allowed',
+                                    fontWeight: '500',
+                                    fontSize: '14px'
+                                }}
+                            >
+                                {uploading ? 'Yuklanmoqda...' : '⬆️ Yuklash'}
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Microphone */}
+                    {showMicTab && (
+                        <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                            {!isRecording && !recordedBlob && (
+                                <>
                                     <button
-                                        className="btn btn-primary btn-lg w-100 shadow-sm"
-                                        onClick={handleUpload}
-                                        disabled={!selectedFile || uploading}
+                                        onClick={startRecording}
+                                        style={{
+                                            width: '100px',
+                                            height: '100px',
+                                            borderRadius: '50%',
+                                            background: '#ea4335',
+                                            border: 'none',
+                                            color: 'white',
+                                            fontSize: '40px',
+                                            cursor: 'pointer',
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                            marginBottom: '16px'
+                                        }}
                                     >
-                                        {uploading ? (
-                                            <>
-                                                <span className="spinner-border spinner-border-sm me-2"></span>
-                                                Yuklanmoqda...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <i className="ri-upload-2-line me-2"></i>
-                                                Yuklash
-                                            </>
-                                        )}
+                                        🎤
                                     </button>
-                                </div>
-                            </div>
-                        )}
+                                    <p style={{ color: '#5f6368', fontSize: '14px' }}>
+                                        Mikrofonni bosing va kitob o'qishni boshlang
+                                    </p>
+                                </>
+                            )}
 
-                        {/* Mikrofon yozish */}
-                        {(isRecording || recordedBlob) && (
-                            <div className="text-center">
-                                {!recordedBlob ? (
-                                    <>
-                                        {/* Yozilmoqda */}
-                                        <div className="mb-4">
-                                            <div className="recording-animation mb-3">
-                                                <div className="pulse-ring"></div>
-                                                <div className="pulse-ring pulse-ring-2"></div>
-                                                <button
-                                                    className="btn btn-danger btn-lg rounded-circle"
-                                                    style={{ width: '80px', height: '80px' }}
-                                                    onClick={stopRecording}
-                                                >
-                                                    <i className="ri-stop-fill fs-1"></i>
-                                                </button>
-                                            </div>
-                                            <h4 className="text-danger mb-2">Yozilmoqda...</h4>
-                                            <h3 className="text-primary">{formatRecordingTime(recordingTime)}</h3>
+                            {isRecording && (
+                                <>
+                                    <div style={{ marginBottom: '24px' }}>
+                                        <div style={{
+                                            width: '80px',
+                                            height: '80px',
+                                            background: '#ea4335',
+                                            borderRadius: '50%',
+                                            margin: '0 auto 16px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '32px',
+                                            color: 'white',
+                                            animation: 'pulse 1.5s infinite'
+                                        }}>
+                                            ⏹️
                                         </div>
+                                        <div style={{ fontSize: '18px', color: '#ea4335', marginBottom: '8px' }}>
+                                            Yozilmoqda...
+                                        </div>
+                                        <div style={{ fontSize: '32px', fontWeight: '500', color: '#1a73e8' }}>
+                                            {formatTime(recordingTime)}
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={stopRecording}
+                                        style={{
+                                            background: '#ea4335',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '12px 24px',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer',
+                                            fontWeight: '500',
+                                            fontSize: '14px'
+                                        }}
+                                    >
+                                        ⏹️ To'xtatish
+                                    </button>
+                                </>
+                            )}
+
+                            {recordedBlob && (
+                                <>
+                                    <div style={{
+                                        background: '#e8f5e9',
+                                        padding: '24px',
+                                        borderRadius: '8px',
+                                        marginBottom: '24px',
+                                        maxWidth: '500px',
+                                        margin: '0 auto 24px'
+                                    }}>
+                                        <div style={{ fontSize: '48px', marginBottom: '12px' }}>✅</div>
+                                        <div style={{ fontSize: '18px', fontWeight: '500', color: '#34a853', marginBottom: '8px' }}>
+                                            Audio yozildi!
+                                        </div>
+                                        <div style={{ fontSize: '14px', color: '#5f6368' }}>
+                                            Davomiyligi: {formatTime(recordingTime)} {/* Bu yerda recordingTime ishlatiladi */}
+                                        </div>
+                                    </div>
+
+                                    <audio
+                                        controls
+                                        src={URL.createObjectURL(recordedBlob)}
+                                        style={{ width: '100%', maxWidth: '500px', marginBottom: '24px' }}
+                                    />
+
+                                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
                                         <button
-                                            className="btn btn-secondary btn-lg"
-                                            onClick={cancelRecording}
+                                            onClick={() => {
+                                                setRecordedBlob(null);
+                                                setRecordingTime(0); // Vaqtni reset qilish
+                                                startRecording();
+                                            }}
+                                            style={{
+                                                background: '#5f6368',
+                                                color: 'white',
+                                                border: 'none',
+                                                padding: '12px 24px',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer',
+                                                fontWeight: '500',
+                                                fontSize: '14px'
+                                            }}
                                         >
-                                            <i className="ri-close-line me-2"></i>
-                                            Bekor qilish
+                                            🔄 Qayta yozish
                                         </button>
-                                    </>
-                                ) : (
-                                    <>
-                                        {/* Yozuv tayyor */}
-                                        <div className="mb-4">
-                                            <div className="alert alert-success d-inline-block px-5 py-3">
-                                                <i className="ri-checkbox-circle-line fs-1 d-block mb-2"></i>
-                                                <h5 className="mb-2">Audio yozildi!</h5>
-                                                <p className="mb-0">Davomiyligi: {formatRecordingTime(recordingTime)}</p>
-                                            </div>
-                                        </div>
-
-                                        {/* Audio player */}
-                                        <audio
-                                            controls
-                                            src={recordedBlob ? URL.createObjectURL(recordedBlob) : ''}
-                                            className="w-100 mb-4"
-                                            style={{ maxWidth: '500px' }}
-                                        />
-
-                                        <div className="d-flex gap-3 justify-content-center">
-                                            <button
-                                                className="btn btn-secondary btn-lg"
-                                                onClick={handleRecordAgain}
-                                            >
-                                                <i className="ri-restart-line me-2"></i>
-                                                Qayta yozish
-                                            </button>
-                                            <button
-                                                className="btn btn-primary btn-lg"
-                                                onClick={handleUploadRecording}
-                                                disabled={uploading}
-                                            >
-                                                {uploading ? (
-                                                    <>
-                                                        <span className="spinner-border spinner-border-sm me-2"></span>
-                                                        Yuklanmoqda...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <i className="ri-upload-2-line me-2"></i>
-                                                        Yuklash
-                                                    </>
-                                                )}
-                                            </button>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Mikrofon yoqish tugmasi */}
-                        {!isRecording && !recordedBlob && !selectedFile && (
-                            <div className="text-center py-4">
-                                <button
-                                    className="btn btn-danger btn-lg rounded-circle shadow-lg"
-                                    style={{ width: '100px', height: '100px' }}
-                                    onClick={startRecording}
-                                >
-                                    <i className="ri-mic-line" style={{ fontSize: '2.5rem' }}></i>
-                                </button>
-                                <p className="text-muted mt-3 mb-0">
-                                    <i className="ri-information-line me-1"></i>
-                                    Mikrofonni bosing va kitob o'qishni boshlang
-                                </p>
-                            </div>
-                        )}
-
-                        {statistics?.today_uploaded && (
-                            <div className="alert alert-success mt-3 mb-0">
-                                <i className="ri-checkbox-circle-line me-2"></i>
-                                <strong>Bugun audio yuklangan!</strong> Davom eting! 🎉
-                            </div>
-                        )}
-                    </div>
+                                        <button
+                                            onClick={handleUploadRecording}
+                                            disabled={uploading}
+                                            style={{
+                                                background: '#1a73e8',
+                                                color: 'white',
+                                                border: 'none',
+                                                padding: '12px 24px',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer',
+                                                fontWeight: '500',
+                                                fontSize: '14px'
+                                            }}
+                                        >
+                                            {uploading ? 'Yuklanmoqda...' : '⬆️ Yuklash'}
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
                 </div>
-            </div>
 
-            {/* Calendar */}
-            <div className="col-12">
-                <div className="card border-0 shadow-sm">
-                    <div className="card-header bg-light d-flex justify-content-between align-items-center">
-                        <h5 className="mb-0">
-                            <i className="ri-calendar-line me-2"></i>
-                            Oylik kalendar
-                        </h5>
-                        <div className="d-flex gap-2">
+                {/* Calendar */}
+                <div style={{
+                    background: 'white',
+                    borderRadius: '8px',
+                    padding: '24px',
+                    marginBottom: '20px',
+                    boxShadow: '0 1px 3px rgba(60,64,67,0.3)'
+                }}>
+                    <div style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        marginBottom: '20px'
+                    }}>
+                        <h2 style={{ fontSize: '18px', fontWeight: '500', color: '#202124', margin: 0 }}>
+                            📅 Oylik kalendar
+                        </h2>
+                        <div style={{ display: 'flex', gap: '8px' }}>
                             <select
-                                className="form-select"
                                 value={selectedMonth}
                                 onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                                style={{
+                                    padding: '8px 12px',
+                                    border: '1px solid #dadce0',
+                                    borderRadius: '4px',
+                                    fontSize: '14px',
+                                    color: '#5f6368'
+                                }}
                             >
                                 {months.map((month, index) => (
                                     <option key={index} value={index}>{month}</option>
                                 ))}
                             </select>
                             <select
-                                className="form-select"
                                 value={selectedYear}
                                 onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                                style={{
+                                    padding: '8px 12px',
+                                    border: '1px solid #dadce0',
+                                    borderRadius: '4px',
+                                    fontSize: '14px',
+                                    color: '#5f6368'
+                                }}
                             >
                                 {[2024, 2025, 2026].map(year => (
                                     <option key={year} value={year}>{year}</option>
@@ -613,171 +659,188 @@ function Kitobxonlik() {
                             </select>
                         </div>
                     </div>
-                    <div className="card-body p-4">
-                        <div className="d-flex justify-content-around mb-4">
-                            <div className="d-flex align-items-center">
-                                <span className="badge bg-success me-2" style={{ width: '20px', height: '20px' }}></span>
-                                <span>Yuklangan</span>
-                            </div>
-                            <div className="d-flex align-items-center">
-                                <span className="badge bg-danger me-2" style={{ width: '20px', height: '20px' }}></span>
-                                <span>O'tkazilgan</span>
-                            </div>
-                            <div className="d-flex align-items-center">
-                                <span className="badge bg-secondary me-2" style={{ width: '20px', height: '20px' }}></span>
-                                <span>Kelgusi kunlar</span>
-                            </div>
-                        </div>
 
-                        <div className="row g-2">
-                            {getCalendarData().map(({ day, hasRecording, isPast, isFuture }) => {
-                                let badgeClass = 'bg-secondary';
-                                if (isPast && !isFuture) {
-                                    badgeClass = hasRecording ? 'bg-success' : 'bg-danger';
-                                }
-
-                                return (
-                                    <div className="col-auto" key={day}>
-                                        <div
-                                            className={`badge ${badgeClass} text-white d-flex align-items-center justify-content-center`}
-                                            style={{
-                                                width: '45px',
-                                                height: '45px',
-                                                fontSize: '16px',
-                                                fontWeight: 'bold'
-                                            }}
-                                            title={
-                                                isFuture ? 'Kelgusi kun' :
-                                                hasRecording ? 'Audio yuklangan' :
-                                                'Audio yuklanmagan'
-                                            }
-                                        >
-                                            {day}
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                    <div style={{ 
+                        display: 'flex', 
+                        justifyContent: 'center', 
+                        gap: '24px',
+                        marginBottom: '20px',
+                        fontSize: '12px'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '16px', height: '16px', background: '#34a853', borderRadius: '4px' }}></div>
+                            <span style={{ color: '#5f6368' }}>Yuklangan</span>
                         </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '16px', height: '16px', background: '#ea4335', borderRadius: '4px' }}></div>
+                            <span style={{ color: '#5f6368' }}>O'tkazilgan</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '16px', height: '16px', background: '#e8eaed', borderRadius: '4px' }}></div>
+                            <span style={{ color: '#5f6368' }}>Kelgusi kunlar</span>
+                        </div>
+                    </div>
+
+                    <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(40px, 1fr))', 
+                        gap: '8px',
+                        maxWidth: '600px',
+                        margin: '0 auto'
+                    }}>
+                        {getCalendarData().map(({ day, hasRecording, isPast, isFuture }) => {
+                            let bgColor = '#e8eaed';
+                            if (isPast && !isFuture) {
+                                bgColor = hasRecording ? '#34a853' : '#ea4335';
+                            }
+
+                            return (
+                                <div
+                                    key={day}
+                                    style={{
+                                        width: '40px',
+                                        height: '40px',
+                                        background: bgColor,
+                                        color: isPast && !isFuture ? 'white' : '#5f6368',
+                                        borderRadius: '4px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontWeight: '500',
+                                        fontSize: '14px'
+                                    }}
+                                >
+                                    {day}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
-            </div>
 
-            {/* Recordings List */}
-            <div className="col-12">
-                <div className="card border-0 shadow-sm">
-                    <div className="card-header bg-light">
-                        <h5 className="mb-0">
-                            <i className="ri-list-check me-2"></i>
-                            Yuklangan audio yozuvlar
-                        </h5>
-                    </div>
-                    <div className="card-body">
-                        <div className="table-responsive">
-                            <table className="table table-hover align-middle">
-                                <thead className="table-light">
+                {/* Recordings Table */}
+                <div style={{
+                    background: 'white',
+                    borderRadius: '8px',
+                    padding: '24px',
+                    boxShadow: '0 1px 3px rgba(60,64,67,0.3)'
+                }}>
+                    <h2 style={{ 
+                        fontSize: '18px', 
+                        fontWeight: '500', 
+                        color: '#202124',
+                        marginBottom: '20px'
+                    }}>
+                        📋 Yuklangan audio yozuvlar
+                    </h2>
+                    
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '1px solid #dadce0' }}>
+                                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', color: '#5f6368', fontWeight: '500' }}>№</th>
+                                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', color: '#5f6368', fontWeight: '500' }}>Sana</th>
+                                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', color: '#5f6368', fontWeight: '500' }}>Fayl nomi</th>
+                                    <th style={{ padding: '12px', textAlign: 'center', fontSize: '14px', color: '#5f6368', fontWeight: '500' }}>Davomiyligi</th>
+                                    <th style={{ padding: '12px', textAlign: 'center', fontSize: '14px', color: '#5f6368', fontWeight: '500' }}>Hajmi</th>
+                                    <th style={{ padding: '12px', textAlign: 'center', fontSize: '14px', color: '#5f6368', fontWeight: '500' }}>Amal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {recordings.length === 0 ? (
                                     <tr>
-                                        <th style={{ width: '5%' }}>№</th>
-                                        <th style={{ width: '15%' }}>Sana</th>
-                                        <th style={{ width: '40%' }}>Fayl nomi</th>
-                                        <th style={{ width: '15%' }} className="text-center">Davomiyligi</th>
-                                        <th style={{ width: '15%' }} className="text-center">Hajmi</th>
-                                        <th style={{ width: '10%' }} className="text-center">Amal</th>
+                                        <td colSpan="6" style={{ padding: '60px 20px', textAlign: 'center' }}>
+                                            <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>📭</div>
+                                            <div style={{ fontSize: '14px', color: '#5f6368' }}>Hozircha audio yozuvlar yo'q</div>
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    {recordings.length === 0 ? (
-                                        <tr>
-                                            <td colSpan="6" className="text-center py-5">
-                                                <i className="ri-inbox-line text-muted" style={{ fontSize: '60px', opacity: 0.3 }}></i>
-                                                <h5 className="text-muted mt-3">Hozircha audio yozuvlar yo'q</h5>
+                                ) : (
+                                    recordings.map((record, index) => (
+                                        <tr key={record.id} style={{ borderBottom: '1px solid #f1f3f4' }}>
+                                            <td style={{ padding: '12px', fontSize: '14px', color: '#202124', fontWeight: '500' }}>{index + 1}</td>
+                                            <td style={{ padding: '12px', fontSize: '14px', color: '#5f6368' }}>
+                                                {new Date(record.created_at).toLocaleDateString('uz-UZ')}
+                                            </td>
+                                            <td style={{ padding: '12px', fontSize: '14px', color: '#202124' }}>
+                                                🎵 {record.filename}
+                                            </td>
+                                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                <span style={{
+                                                    background: '#e8f0fe',
+                                                    color: '#1a73e8',
+                                                    padding: '4px 12px',
+                                                    borderRadius: '12px',
+                                                    fontSize: '12px',
+                                                    fontWeight: '500'
+                                                }}>
+                                                    {formatTime(record.duration)}
+                                                </span>
+                                            </td>
+                                            <td style={{ padding: '12px', textAlign: 'center', fontSize: '14px', color: '#5f6368' }}>
+                                                {formatFileSize(record.file_size)}
+                                            </td>
+                                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                <a
+                                                    href={record.file_url.startsWith('http') 
+                                                        ? record.file_url 
+                                                        : `http://localhost:8000/storage/${record.file_url}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    style={{
+                                                        background: '#1a73e8',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        padding: '6px 12px',
+                                                        borderRadius: '4px',
+                                                        cursor: 'pointer',
+                                                        fontSize: '14px',
+                                                        textDecoration: 'none',
+                                                        display: 'inline-block'
+                                                    }}
+                                                >
+                                                    ▶️ Eshitish
+                                                </a>
                                             </td>
                                         </tr>
-                                    ) : (
-                                        recordings.map((record, index) => (
-                                            <tr key={record.id}>
-                                                <td className="fw-bold">{index + 1}</td>
-                                                <td>
-                                                    <i className="ri-calendar-line me-1 text-muted"></i>
-                                                    {new Date(record.created_at).toLocaleDateString('uz-UZ')}
-                                                </td>
-                                                <td>
-                                                    <div className="d-flex align-items-center">
-                                                        <i className="ri-file-music-line text-primary me-2 fs-4"></i>
-                                                        <span>{record.filename}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="text-center">
-                                                    <span className="badge bg-info px-3 py-2">
-                                                        <i className="ri-time-line me-1"></i>
-                                                        {formatDuration(record.duration)}
-                                                    </span>
-                                                </td>
-                                                <td className="text-center">
-                                                    <span className="badge bg-secondary px-3 py-2">
-                                                        {formatFileSize(record.file_size)}
-                                                    </span>
-                                                </td>
-                                                <td className="text-center">
-                                                    <a
-                                                        href={record.file_url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="btn btn-sm btn-primary"
-                                                        title="Eshitish"
-                                                    >
-                                                        <i className="ri-play-circle-line"></i>
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
+
+            <style>{`
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; transform: scale(1); }
+                    50% { opacity: 0.8; transform: scale(1.05); }
+                }
+
+                button:hover {
+                    opacity: 0.9;
+                    transition: opacity 0.2s;
+                }
+
+                button:active {
+                    transform: scale(0.98);
+                }
+
+                @media (max-width: 768px) {
+                    table {
+                        font-size: 12px;
+                    }
+                    
+                    th, td {
+                        padding: 8px !important;
+                    }
+                }
+            `}</style>
         </div>
     );
 }
 
 export default Kitobxonlik;
-
-// CSS - HTML head ga qo'shish kerak yoki alohida CSS faylda
-/*
-<style>
-.recording-animation {
-    position: relative;
-    display: inline-block;
-}
-
-.pulse-ring {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100px;
-    height: 100px;
-    border: 3px solid #dc3545;
-    border-radius: 50%;
-    animation: pulse 1.5s ease-out infinite;
-}
-
-.pulse-ring-2 {
-    animation-delay: 0.75s;
-}
-
-@keyframes pulse {
-    0% {
-        width: 100px;
-        height: 100px;
-        opacity: 1;
-    }
-    100% {
-        width: 150px;
-        height: 150px;
-        opacity: 0;
-    }
-}
-</style>
-*/
