@@ -13,6 +13,7 @@ function Kitobxonlik() {
     const [recordingTime, setRecordingTime] = useState(0);
     const [mediaRecorder, setMediaRecorder] = useState(null);
     const [showMicTab, setShowMicTab] = useState(false);
+    const [bookName, setBookName] = useState(''); // Kitob nomi
 
     useEffect(() => {
         fetchReadings();
@@ -117,9 +118,26 @@ function Kitobxonlik() {
     };
 
     const startRecording = async () => {
+        // Kitob nomini tekshirish
+        if (!bookName.trim()) {
+            alert('❌ Iltimos, avval kitob nomini kiriting!');
+            return;
+        }
+
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const recorder = new MediaRecorder(stream);
+            
+            // Audio siqish sozlamalari
+            const options = {
+                mimeType: 'audio/webm;codecs=opus',
+                audioBitsPerSecond: 32000
+            };
+            
+            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                options.mimeType = 'audio/webm';
+            }
+            
+            const recorder = new MediaRecorder(stream, options);
             const chunks = [];
 
             recorder.ondataavailable = (e) => {
@@ -127,7 +145,7 @@ function Kitobxonlik() {
             };
 
             recorder.onstop = () => {
-                const blob = new Blob(chunks, { type: 'audio/webm' });
+                const blob = new Blob(chunks, { type: options.mimeType });
                 setRecordedBlob(blob);
                 stream.getTracks().forEach(track => track.stop());
             };
@@ -157,10 +175,13 @@ function Kitobxonlik() {
             const token = localStorage.getItem('token');
             const formData = new FormData();
             
-            // Blob'ni file formatiga o'tkazish
+            // Kitob nomi bilan fayl yaratish
+            const safeBookName = bookName.trim().replace(/[^a-zA-Z0-9а-яА-ЯёЁўҚқҒғҲҳ\s]/g, '').replace(/\s+/g, '_');
+            const fileName = `${safeBookName}_${Date.now()}.webm`;
+            
             const file = new File(
                 [recordedBlob], 
-                `recording_${Date.now()}.webm`, 
+                fileName, 
                 { type: 'audio/webm' }
             );
             
@@ -181,6 +202,7 @@ function Kitobxonlik() {
                 alert('✅ Audio muvaffaqiyatli yuklandi!');
                 setRecordedBlob(null);
                 setRecordingTime(0);
+                setBookName(''); // Kitob nomini tozalash
                 fetchReadings();
             } else {
                 alert('❌ Xatolik: ' + data.message);
@@ -344,6 +366,19 @@ function Kitobxonlik() {
                         </div>
                         <div style={{ fontSize: '14px', color: '#5f6368' }}>To'liqlik darajasi</div>
                     </div>
+
+                    <div style={{
+                        background: 'white',
+                        borderRadius: '8px',
+                        padding: '20px',
+                        boxShadow: '0 1px 3px rgba(60,64,67,0.3)',
+                        borderLeft: '4px solid #9c27b0'
+                    }}>
+                        <div style={{ fontSize: '32px', fontWeight: '500', color: '#9c27b0', marginBottom: '8px' }}>
+                            {statistics?.total_storage_used || '0 MB'}
+                        </div>
+                        <div style={{ fontSize: '14px', color: '#5f6368' }}>Jami hajm</div>
+                    </div>
                 </div>
 
                 {/* Upload Section */}
@@ -475,6 +510,36 @@ function Kitobxonlik() {
                         <div style={{ textAlign: 'center', padding: '40px 0' }}>
                             {!isRecording && !recordedBlob && (
                                 <>
+                                    {/* Kitob nomi input */}
+                                    <div style={{ marginBottom: '24px', maxWidth: '400px', margin: '0 auto 24px' }}>
+                                        <label style={{ 
+                                            display: 'block', 
+                                            marginBottom: '8px', 
+                                            fontSize: '14px', 
+                                            color: '#5f6368',
+                                            textAlign: 'left'
+                                        }}>
+                                            Kitob nomi
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Masalan: Sariq devning minorasi"
+                                            value={bookName}
+                                            onChange={(e) => setBookName(e.target.value)}
+                                            style={{
+                                                width: '100%',
+                                                padding: '12px',
+                                                border: '2px solid #dadce0',
+                                                borderRadius: '8px',
+                                                fontSize: '14px',
+                                                outline: 'none',
+                                                transition: 'border 0.2s'
+                                            }}
+                                            onFocus={(e) => e.target.style.borderColor = '#1a73e8'}
+                                            onBlur={(e) => e.target.style.borderColor = '#dadce0'}
+                                        />
+                                    </div>
+
                                     <button
                                         onClick={startRecording}
                                         style={{
@@ -555,8 +620,11 @@ function Kitobxonlik() {
                                         <div style={{ fontSize: '18px', fontWeight: '500', color: '#34a853', marginBottom: '8px' }}>
                                             Audio yozildi!
                                         </div>
+                                        <div style={{ fontSize: '16px', color: '#202124', marginBottom: '4px', fontWeight: '500' }}>
+                                            📚 {bookName}
+                                        </div>
                                         <div style={{ fontSize: '14px', color: '#5f6368' }}>
-                                            Davomiyligi: {formatTime(recordingTime)} {/* Bu yerda recordingTime ishlatiladi */}
+                                            Davomiyligi: {formatTime(recordingTime)}
                                         </div>
                                     </div>
 
@@ -570,7 +638,8 @@ function Kitobxonlik() {
                                         <button
                                             onClick={() => {
                                                 setRecordedBlob(null);
-                                                setRecordingTime(0); // Vaqtni reset qilish
+                                                setRecordingTime(0);
+                                                // Kitob nomini saqlab qolish
                                                 startRecording();
                                             }}
                                             style={{
@@ -778,7 +847,7 @@ function Kitobxonlik() {
                                             <td style={{ padding: '12px', textAlign: 'center', fontSize: '14px', color: '#5f6368' }}>
                                                 {formatFileSize(record.file_size)}
                                             </td>
-                                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                                             <td style={{ padding: '12px', textAlign: 'center' }}>
                                                 <a
                                                     href={record.file_url.startsWith('http') 
                                                         ? record.file_url 
