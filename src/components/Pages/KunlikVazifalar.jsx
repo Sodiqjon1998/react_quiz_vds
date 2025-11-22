@@ -4,69 +4,100 @@ function KunlikVazifalar() {
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-    const [statistics, setStatistics] = useState(null);
+    const [userName, setUserName] = useState('');
     const [savingTaskId, setSavingTaskId] = useState(null);
-    
-    // Yangi vazifa qo'shish uchun
-    const [showAddModal, setShowAddModal] = useState(false);
-    const [newTask, setNewTask] = useState({
-        name: '',
-        emoji: '📝',
-        description: ''
-    });
-    const [addingTask, setAddingTask] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-
-    // Emoji ro'yxati
-    const emojiList = [
-        '🌅', '🏃', '🍳', '🧹', '🤲', '💪', '📚', '🏠', '📝', '👟',
-        '⚽', '🎨', '🎵', '🎮', '📱', '💻', '🎯', '🏆', '🌟', '✨',
-        '🍎', '🥗', '🥤', '☕', '🍕', '🍔', '🍰', '🎂', '🧃', '🥛',
-        '👕', '👔', '👗', '👠', '🧦', '🎒', '👓', '⌚', '💼', '👜',
-        '🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐',
-        '❤️', '💚', '💙', '💜', '🧡', '💛', '🖤', '🤍', '🤎', '💖'
-    ];
+    const [monthlyStats, setMonthlyStats] = useState({});
+    const [showCalendar, setShowCalendar] = useState(false);
+    const [currentMonth, setCurrentMonth] = useState(new Date());
 
     useEffect(() => {
         fetchTasks();
+        fetchMonthlyStats();
     }, [selectedDate]);
 
     const fetchTasks = async () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
-            
-            const response = await fetch(
-                `http://localhost:8000/api/tasks?date=${selectedDate}`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Accept': 'application/json'
-                    }
+
+            if (token) {
+                const response = await fetch(
+                    `http://localhost:8000/api/tasks?date=${selectedDate}`,
+                    { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } }
+                );
+
+                const data = await response.json();
+                if (data.success) {
+                    setTasks(data.data.tasks);
                 }
-            );
-
-            const data = await response.json();
-
-            if (data.success) {
-                setTasks(data.data.tasks);
-                setStatistics(data.data.statistics);
+            } else {
+                setTasks([
+                    { id: 1, name: 'Erta uyg\'onish', emoji: '🌅', is_completed: null },
+                    { id: 2, name: 'Jismoniy tarbiya', emoji: '🏃', is_completed: null },
+                    { id: 3, name: 'Nonushtaga yordam', emoji: '🍳', is_completed: null },
+                    { id: 4, name: 'Xonani tartiblash', emoji: '🏠', is_completed: null },
+                    { id: 5, name: 'Duo qilish', emoji: '🤲', is_completed: null },
+                    { id: 6, name: 'Mehr berish', emoji: '❤️', is_completed: null },
+                    { id: 7, name: 'Kitob o\'qish', emoji: '📚', is_completed: null },
+                    { id: 8, name: 'Uy ishlariga yordam', emoji: '🏠', is_completed: null },
+                    { id: 9, name: '5 ta inglizcha so\'z', emoji: '🔤', is_completed: null },
+                    { id: 10, name: 'Oyoq kiyim tozalash', emoji: '👟', is_completed: null }
+                ]);
             }
         } catch (err) {
             console.error('Fetch error:', err);
+            setTasks([
+                { id: 1, name: 'Erta uyg\'onish', emoji: '🌅', is_completed: null },
+                { id: 2, name: 'Jismoniy tarbiya', emoji: '🏃', is_completed: null },
+                { id: 3, name: 'Nonushtaga yordam', emoji: '🍳', is_completed: null },
+                { id: 4, name: 'Xonani tartiblash', emoji: '🏠', is_completed: null },
+                { id: 5, name: 'Duo qilish', emoji: '🤲', is_completed: null },
+                { id: 6, name: 'Mehr berish', emoji: '❤️', is_completed: null },
+                { id: 7, name: 'Kitob o\'qish', emoji: '📚', is_completed: null },
+                { id: 8, name: 'Uy ishlariga yordam', emoji: '🏠', is_completed: null },
+                { id: 9, name: '5 ta inglizcha so\'z', emoji: '🔤', is_completed: null },
+                { id: 10, name: 'Oyoq kiyim tozalash', emoji: '👟', is_completed: null }
+            ]);
         } finally {
             setLoading(false);
         }
     };
 
-    const toggleTaskStatus = async (taskId, currentStatus) => {
+    const fetchMonthlyStats = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            const year = currentMonth.getFullYear();
+            const month = currentMonth.getMonth() + 1;
+
+            const response = await fetch(
+                `http://localhost:8000/api/stats/monthly?year=${year}&month=${month}`,
+                { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } }
+            );
+
+            const data = await response.json();
+            if (data.success) {
+                setMonthlyStats(data.data);
+            }
+        } catch (err) {
+            console.error('Stats error:', err);
+        }
+    };
+
+    const toggleTaskStatus = async (taskId, newStatus) => {
+        setTasks(prevTasks =>
+            prevTasks.map(task =>
+                task.id === taskId ? { ...task, is_completed: newStatus } : task
+            )
+        );
+
         try {
             setSavingTaskId(taskId);
             const token = localStorage.getItem('token');
-            
-            const response = await fetch(
-                `http://localhost:8000/api/tasks/${taskId}/toggle`,
-                {
+
+            if (token) {
+                const response = await fetch(`http://localhost:8000/api/tasks/${taskId}/toggle`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -74,602 +105,386 @@ function KunlikVazifalar() {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        date: selectedDate
+                        date: selectedDate,
+                        is_completed: newStatus  // BU MUHIM!
                     })
+                });
+
+                if (!response.ok) {
+                    console.error('Server error:', await response.text());
                 }
-            );
-
-            const data = await response.json();
-
-            if (data.success) {
-                setTasks(prevTasks =>
-                    prevTasks.map(task =>
-                        task.id === taskId
-                            ? { ...task, is_completed: !currentStatus }
-                            : task
-                    )
-                );
-                fetchTasks();
             }
         } catch (err) {
             console.error('Toggle error:', err);
-            alert('Xatolik yuz berdi!');
         } finally {
             setSavingTaskId(null);
         }
     };
 
-    const handleAddTask = async (e) => {
-        e.preventDefault();
-        
-        if (!newTask.name.trim()) {
-            alert('Vazifa nomini kiriting!');
-            return;
-        }
+    const getDaysInMonth = (date) => {
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        const startingDayOfWeek = firstDay.getDay();
 
-        try {
-            setAddingTask(true);
-            const token = localStorage.getItem('token');
-            
-            const response = await fetch('http://localhost:8000/api/tasks', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(newTask)
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                alert('✅ Vazifa muvaffaqiyatli qo\'shildi!');
-                setShowAddModal(false);
-                setNewTask({ name: '', emoji: '📝', description: '' });
-                fetchTasks();
-            } else {
-                throw new Error(data.message);
-            }
-        } catch (err) {
-            console.error('Add task error:', err);
-            alert('❌ Xatolik: ' + err.message);
-        } finally {
-            setAddingTask(false);
-        }
+        return { daysInMonth, startingDayOfWeek };
     };
 
-    const handleDeleteTask = async (taskId) => {
-        if (!confirm('Haqiqatan ham bu vazifani o\'chirmoqchimisiz?')) {
-            return;
+    const renderCalendar = () => {
+        const { daysInMonth, startingDayOfWeek } = getDaysInMonth(currentMonth);
+        const days = [];
+
+        for (let i = 0; i < startingDayOfWeek; i++) {
+            days.push(<div key={`empty-${i}`} style={{ padding: '10px' }}></div>);
         }
 
-        try {
-            const token = localStorage.getItem('token');
-            
-            const response = await fetch(`http://localhost:8000/api/tasks/${taskId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Accept': 'application/json'
-                }
-            });
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const hasReport = monthlyStats[dateStr] || false;
+            const isToday = dateStr === new Date().toISOString().split('T')[0];
 
-            const data = await response.json();
-
-            if (data.success) {
-                alert('✅ Vazifa o\'chirildi!');
-                fetchTasks();
-            } else {
-                throw new Error(data.message);
-            }
-        } catch (err) {
-            console.error('Delete error:', err);
-            alert('❌ Xatolik: ' + err.message);
+            days.push(
+                <div
+                    key={day}
+                    onClick={() => {
+                        setSelectedDate(dateStr);
+                        setShowCalendar(false);
+                    }}
+                    style={{
+                        padding: '10px',
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        borderRadius: '10px',
+                        background: hasReport ? 'linear-gradient(45deg, #28a745, #20c997)' :
+                            isToday ? 'linear-gradient(45deg, #667eea, #764ba2)' : 'white',
+                        color: hasReport || isToday ? 'white' : '#333',
+                        fontWeight: hasReport || isToday ? '600' : '400',
+                        border: '2px solid ' + (hasReport ? '#28a745' : isToday ? '#667eea' : '#e1e5e9'),
+                        transition: 'all 0.3s ease'
+                    }}
+                >
+                    {day}
+                    {hasReport && <div style={{ fontSize: '10px', marginTop: '2px' }}>✓</div>}
+                </div>
+            );
         }
+
+        return days;
     };
-
-    const formatDate = (dateString) => {
-        const date = new Date(dateString);
-        const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
-        return date.toLocaleDateString('uz-UZ', options);
-    };
-
-    const isToday = selectedDate === new Date().toISOString().split('T')[0];
-    const isPast = new Date(selectedDate) < new Date(new Date().toISOString().split('T')[0]);
-
-    // Search filter
-    const filteredTasks = tasks.filter(task =>
-        task.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
 
     if (loading) {
         return (
-            <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
-                <div className="text-center">
-                    <div className="spinner-border text-primary mb-3" style={{ width: '3rem', height: '3rem' }}>
-                        <span className="visually-hidden">Yuklanmoqda...</span>
-                    </div>
-                    <h5 className="text-muted">Ma'lumotlar yuklanmoqda...</h5>
+            <div style={{
+                minHeight: '100vh',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center'
+            }}>
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{
+                        width: '3rem',
+                        height: '3rem',
+                        border: '4px solid rgba(255, 255, 255, 0.3)',
+                        borderTop: '4px solid white',
+                        borderRadius: '50%',
+                        margin: '0 auto 1rem',
+                        animation: 'spin 1s linear infinite'
+                    }}></div>
+                    <h5 style={{ color: 'white' }}>Yuklanmoqda...</h5>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="container-fluid py-4">
-            {/* Header */}
-            <div className="card border-0 shadow-lg mb-4" style={{ 
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                borderRadius: '20px'
-            }}>
-                <div className="card-body p-4">
-                    <div className="row align-items-center">
-                        <div className="col-md-8">
-                            <h2 className="text-white mb-2">
-                                <i className="ri-task-line me-2"></i>
-                                Kunlik Vazifalar
-                            </h2>
-                            <p className="text-white-50 mb-0">
-                                {formatDate(selectedDate)}
-                            </p>
-                        </div>
-                        <div className="col-md-4 text-end">
+        <div style={{
+            minHeight: '100vh',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            padding: '20px',
+            paddingBottom: '40px',
+            overflowY: 'auto'
+        }}>
+            <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+                <div style={{
+                    background: 'rgba(255, 255, 255, 0.95)',
+                    backdropFilter: 'blur(20px)',
+                    padding: '30px',
+                    borderRadius: '25px',
+                    boxShadow: '0 25px 50px rgba(0, 0, 0, 0.2)',
+                    marginBottom: '20px',
+                    textAlign: 'center'
+                }}>
+                    <h1 style={{
+                        background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        fontWeight: '700',
+                        fontSize: '2.2rem',
+                        marginBottom: '10px'
+                    }}>
+                        Kunlik Vazifalar
+                    </h1>
+                    <p style={{ color: '#666', margin: 0 }}>Bugungi vazifalari bajarishini belgilang</p>
+
+                    <button
+                        onClick={() => setShowCalendar(!showCalendar)}
+                        style={{
+                            marginTop: '15px',
+                            padding: '10px 20px',
+                            borderRadius: '10px',
+                            border: '2px solid #667eea',
+                            background: 'white',
+                            color: '#667eea',
+                            cursor: 'pointer',
+                            fontWeight: '600',
+                            transition: 'all 0.3s ease'
+                        }}
+                    >
+                        📅 Kalendar ko'rish
+                    </button>
+                </div>
+
+                {showCalendar && (
+                    <div style={{
+                        background: 'rgba(255, 255, 255, 0.95)',
+                        backdropFilter: 'blur(20px)',
+                        padding: '30px',
+                        borderRadius: '25px',
+                        boxShadow: '0 25px 50px rgba(0, 0, 0, 0.2)',
+                        marginBottom: '20px'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                             <button
-                                className="btn btn-light btn-lg shadow-sm"
-                                onClick={() => setShowAddModal(true)}
-                                style={{ borderRadius: '15px', fontWeight: '600' }}
-                            >
-                                <i className="ri-add-circle-line me-2"></i>
-                                Yangi vazifa
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* User Name Input */}
-            <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: '15px' }}>
-                <div className="card-body p-3">
-                    <div className="input-group input-group-lg">
-                        <span className="input-group-text border-0 bg-light" style={{ borderRadius: '10px 0 0 10px' }}>
-                            <i className="ri-user-3-line text-primary"></i>
-                        </span>
-                        <input
-                            type="text"
-                            className="form-control border-0 bg-light"
-                            placeholder="Ismingizni kiriting..."
-                            style={{ borderRadius: '0 10px 10px 0' }}
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                    </div>
-                    <small className="text-muted ms-2">
-                        <i className="ri-information-line me-1"></i>
-                        Bugungi vazifalar bajarishini belgilang
-                    </small>
-                </div>
-            </div>
-
-            {/* Date Navigation */}
-            <div className="row g-3 mb-4">
-                <div className="col-12">
-                    <div className="card border-0 shadow-sm" style={{ borderRadius: '15px' }}>
-                        <div className="card-body p-3">
-                            <div className="d-flex align-items-center gap-2">
-                                <button
-                                    className="btn btn-outline-primary"
-                                    style={{ borderRadius: '10px' }}
-                                    onClick={() => {
-                                        const newDate = new Date(selectedDate);
-                                        newDate.setDate(newDate.getDate() - 1);
-                                        setSelectedDate(newDate.toISOString().split('T')[0]);
-                                    }}
-                                >
-                                    <i className="ri-arrow-left-s-line"></i>
-                                </button>
-                                
-                                <input
-                                    type="date"
-                                    className="form-control form-control-lg text-center"
-                                    style={{ borderRadius: '10px' }}
-                                    value={selectedDate}
-                                    onChange={(e) => setSelectedDate(e.target.value)}
-                                    max={new Date().toISOString().split('T')[0]}
-                                />
-                                
-                                <button
-                                    className="btn btn-outline-primary"
-                                    style={{ borderRadius: '10px' }}
-                                    onClick={() => {
-                                        const newDate = new Date(selectedDate);
-                                        newDate.setDate(newDate.getDate() + 1);
-                                        if (newDate <= new Date()) {
-                                            setSelectedDate(newDate.toISOString().split('T')[0]);
-                                        }
-                                    }}
-                                    disabled={isToday}
-                                >
-                                    <i className="ri-arrow-right-s-line"></i>
-                                </button>
-
-                                <button
-                                    className="btn btn-primary"
-                                    style={{ borderRadius: '10px' }}
-                                    onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
-                                    disabled={isToday}
-                                >
-                                    <i className="ri-calendar-check-line me-1"></i>
-                                    Bugun
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Statistics */}
-            {statistics && (
-                <div className="row g-3 mb-4">
-                    <div className="col-md-4">
-                        <div className="card border-0 shadow-sm h-100" style={{ borderRadius: '15px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-                            <div className="card-body p-4 text-center text-white">
-                                <div className="display-4 mb-2">
-                                    <i className="ri-checkbox-circle-fill"></i>
-                                </div>
-                                <h3 className="mb-1">{statistics.completed}</h3>
-                                <p className="mb-0 opacity-75">Bajarilgan</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="col-md-4">
-                        <div className="card border-0 shadow-sm h-100" style={{ borderRadius: '15px', background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
-                            <div className="card-body p-4 text-center text-white">
-                                <div className="display-4 mb-2">
-                                    <i className="ri-time-line"></i>
-                                </div>
-                                <h3 className="mb-1">{statistics.pending}</h3>
-                                <p className="mb-0 opacity-75">Kutilmoqda</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="col-md-4">
-                        <div className="card border-0 shadow-sm h-100" style={{ borderRadius: '15px', background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
-                            <div className="card-body p-4 text-center text-white">
-                                <div className="display-4 mb-2">
-                                    <i className="ri-percent-line"></i>
-                                </div>
-                                <h3 className="mb-1">{statistics.completion_rate}%</h3>
-                                <p className="mb-0 opacity-75">Bajarilish foizi</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Tasks Grid */}
-            {filteredTasks.length === 0 ? (
-                <div className="card border-0 shadow-sm" style={{ borderRadius: '15px' }}>
-                    <div className="card-body text-center py-5">
-                        <i className="ri-inbox-line text-muted" style={{ fontSize: '80px', opacity: 0.3 }}></i>
-                        <h5 className="text-muted mt-3">
-                            {searchQuery ? 'Vazifa topilmadi' : 'Hozircha vazifalar yo\'q'}
-                        </h5>
-                        {!searchQuery && (
-                            <button
-                                className="btn btn-primary mt-3"
-                                style={{ borderRadius: '10px' }}
-                                onClick={() => setShowAddModal(true)}
-                            >
-                                <i className="ri-add-line me-2"></i>
-                                Birinchi vazifani qo'shish
-                            </button>
-                        )}
-                    </div>
-                </div>
-            ) : (
-                <div className="row g-3">
-                    {filteredTasks.map((task, index) => (
-                        <div key={task.id} className="col-md-6 col-lg-4">
-                            <div 
-                                className={`card border-0 shadow-sm h-100 position-relative ${
-                                    task.is_completed ? 'bg-light' : ''
-                                }`}
-                                style={{ 
-                                    borderRadius: '15px',
-                                    transition: 'all 0.3s ease',
+                                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
+                                style={{
+                                    padding: '10px 15px',
+                                    borderRadius: '10px',
+                                    border: '2px solid #667eea',
+                                    background: 'white',
                                     cursor: 'pointer',
-                                    border: task.is_completed ? '2px solid #28a745' : '2px solid transparent'
+                                    fontSize: '18px',
+                                    fontWeight: 'bold'
                                 }}
                             >
-                                {/* Badge Number */}
-                                <div 
-                                    className={`position-absolute badge ${
-                                        task.is_completed ? 'bg-success' : 'bg-primary'
-                                    } rounded-circle`}
-                                    style={{ 
-                                        top: '-10px', 
-                                        left: '-10px',
-                                        width: '45px',
-                                        height: '45px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '18px',
-                                        fontWeight: 'bold',
-                                        boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-                                    }}
-                                >
+                                ←
+                            </button>
+                            <h3 style={{ margin: 0, color: '#667eea' }}>
+                                {currentMonth.toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' })}
+                            </h3>
+                            <button
+                                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}
+                                style={{
+                                    padding: '10px 15px',
+                                    borderRadius: '10px',
+                                    border: '2px solid #667eea',
+                                    background: 'white',
+                                    cursor: 'pointer',
+                                    fontSize: '18px',
+                                    fontWeight: 'bold'
+                                }}
+                            >
+                                →
+                            </button>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '10px', marginBottom: '10px' }}>
+                            {['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'].map(day => (
+                                <div key={day} style={{ textAlign: 'center', fontWeight: '600', color: '#667eea', padding: '8px' }}>
+                                    {day}
+                                </div>
+                            ))}
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '10px' }}>
+                            {renderCalendar()}
+                        </div>
+
+                        <div style={{ marginTop: '20px', fontSize: '14px', color: '#666' }}>
+                            <div>🟢 Yashil: Yuborilgan kunlar</div>
+                            <div>🔵 Ko'k: Bugungi kun</div>
+                        </div>
+                    </div>
+                )}
+
+                <div style={{
+                    background: 'rgba(255, 255, 255, 0.95)',
+                    backdropFilter: 'blur(20px)',
+                    padding: '20px',
+                    borderRadius: '25px',
+                    boxShadow: '0 25px 50px rgba(0, 0, 0, 0.2)',
+                    marginBottom: '20px'
+                }}>
+                    <input
+                        type="text"
+                        placeholder="Ismingizni kiriting..."
+                        value={userName}
+                        onChange={(e) => setUserName(e.target.value)}
+                        style={{
+                            width: '100%',
+                            padding: '15px 20px',
+                            border: '2px solid #e1e5e9',
+                            borderRadius: '15px',
+                            fontSize: '16px',
+                            background: 'rgba(255, 255, 255, 0.9)',
+                            outline: 'none',
+                            boxSizing: 'border-box'
+                        }}
+                    />
+                </div>
+
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: '15px',
+                    marginBottom: '20px'
+                }}>
+                    {tasks.map((task, index) => (
+                        <div
+                            key={task.id}
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(240, 242, 247, 0.95) 100%)',
+                                border: '2px solid rgba(102, 126, 234, 0.1)',
+                                borderRadius: '20px',
+                                padding: '25px',
+                                transition: 'all 0.3s ease',
+                                boxShadow: '0 5px 15px rgba(0, 0, 0, 0.1)'
+                            }}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+                                <div style={{
+                                    background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                                    color: 'white',
+                                    width: '35px',
+                                    height: '35px',
+                                    borderRadius: '50%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontWeight: '600',
+                                    marginRight: '15px',
+                                    boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+                                    flexShrink: 0
+                                }}>
                                     {index + 1}
                                 </div>
+                                <div style={{ fontWeight: '600', color: '#333', flexGrow: 1, fontSize: '15px' }}>
+                                    {task.emoji} {task.name}
+                                </div>
+                            </div>
 
-                                {/* Delete Button */}
-                                <button
-                                    className="btn btn-sm btn-danger position-absolute"
-                                    style={{ 
-                                        top: '10px', 
-                                        right: '10px',
-                                        borderRadius: '8px',
-                                        padding: '5px 10px'
-                                    }}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeleteTask(task.id);
-                                    }}
-                                    title="O'chirish"
-                                >
-                                    <i className="ri-delete-bin-line"></i>
-                                </button>
-
-                                <div className="card-body p-4 text-center">
-                                    {/* Emoji */}
-                                    <div 
-                                        className="mb-3"
-                                        style={{ fontSize: '60px' }}
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: '20px' }}>
+                                <div>
+                                    <input
+                                        type="radio"
+                                        name={`task-${task.id}`}
+                                        id={`yes-${task.id}`}
+                                        checked={task.is_completed === true}
+                                        onChange={() => toggleTaskStatus(task.id, true)}
+                                        style={{ display: 'none' }}
+                                    />
+                                    <label
+                                        htmlFor={`yes-${task.id}`}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            width: '60px',
+                                            height: '60px',
+                                            borderRadius: '50%',
+                                            cursor: 'pointer',
+                                            fontSize: '24px',
+                                            border: '3px solid #28a745',
+                                            background: task.is_completed === true ? 'linear-gradient(45deg, #28a745, #20c997)' : 'white',
+                                            color: task.is_completed === true ? 'white' : '#28a745',
+                                            boxShadow: task.is_completed === true ? '0 10px 25px rgba(40, 167, 69, 0.3)' : 'none',
+                                            transform: task.is_completed === true ? 'scale(1.1)' : 'scale(1)',
+                                            transition: 'all 0.3s ease'
+                                        }}
                                     >
-                                        {task.emoji}
-                                    </div>
+                                        ✅
+                                    </label>
+                                </div>
 
-                                    {/* Task Name */}
-                                    <h5 
-                                        className={`mb-2 ${
-                                            task.is_completed ? 'text-decoration-line-through text-muted' : ''
-                                        }`}
-                                        style={{ fontWeight: '600' }}
+                                <div>
+                                    <input
+                                        type="radio"
+                                        name={`task-${task.id}`}
+                                        id={`no-${task.id}`}
+                                        checked={task.is_completed === false}
+                                        onChange={() => toggleTaskStatus(task.id, false)}
+                                        style={{ display: 'none' }}
+                                    />
+                                    <label
+                                        htmlFor={`no-${task.id}`}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            width: '60px',
+                                            height: '60px',
+                                            borderRadius: '50%',
+                                            cursor: 'pointer',
+                                            fontSize: '24px',
+                                            border: '3px solid #dc3545',
+                                            background: task.is_completed === false ? 'linear-gradient(45deg, #dc3545, #e83e8c)' : 'white',
+                                            color: task.is_completed === false ? 'white' : '#dc3545',
+                                            boxShadow: task.is_completed === false ? '0 10px 25px rgba(220, 53, 69, 0.3)' : 'none',
+                                            transform: task.is_completed === false ? 'scale(1.1)' : 'scale(1)',
+                                            transition: 'all 0.3s ease'
+                                        }}
                                     >
-                                        {task.name}
-                                    </h5>
-
-                                    {/* Description */}
-                                    {task.description && (
-                                        <p className="text-muted small mb-3">{task.description}</p>
-                                    )}
-
-                                    {/* Action Buttons - Radio style */}
-                                    <div className="d-flex gap-3 justify-content-center mt-4">
-                                        {/* Bajarildi - Green Check */}
-                                        <label 
-                                            className={`btn btn-success btn-lg rounded-circle ${
-                                                task.is_completed ? '' : 'btn-outline-success'
-                                            }`}
-                                            style={{ 
-                                                width: '70px', 
-                                                height: '70px',
-                                                cursor: isPast ? 'not-allowed' : 'pointer',
-                                                boxShadow: task.is_completed ? '0 6px 20px rgba(40, 167, 69, 0.4)' : 'none',
-                                                border: task.is_completed ? '3px solid #28a745' : '3px solid #28a745',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                transition: 'all 0.3s ease',
-                                                opacity: isPast ? 0.6 : 1
-                                            }}
-                                        >
-                                            <input
-                                                type="radio"
-                                                name={`task-${task.id}`}
-                                                checked={task.is_completed}
-                                                onChange={() => !task.is_completed && toggleTaskStatus(task.id, task.is_completed)}
-                                                disabled={savingTaskId === task.id || isPast}
-                                                style={{ display: 'none' }}
-                                            />
-                                            {savingTaskId === task.id && task.is_completed ? (
-                                                <span className="spinner-border spinner-border-sm"></span>
-                                            ) : (
-                                                <i className="ri-check-line" style={{ fontSize: '32px' }}></i>
-                                            )}
-                                        </label>
-
-                                        {/* Bajarilmadi - Red X */}
-                                        <label 
-                                            className={`btn btn-danger btn-lg rounded-circle ${
-                                                !task.is_completed ? '' : 'btn-outline-danger'
-                                            }`}
-                                            style={{ 
-                                                width: '70px', 
-                                                height: '70px',
-                                                cursor: isPast ? 'not-allowed' : 'pointer',
-                                                boxShadow: !task.is_completed ? '0 6px 20px rgba(220, 53, 69, 0.4)' : 'none',
-                                                border: !task.is_completed ? '3px solid #dc3545' : '3px solid #dc3545',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                transition: 'all 0.3s ease',
-                                                opacity: isPast ? 0.6 : 1
-                                            }}
-                                        >
-                                            <input
-                                                type="radio"
-                                                name={`task-${task.id}`}
-                                                checked={!task.is_completed}
-                                                onChange={() => task.is_completed && toggleTaskStatus(task.id, task.is_completed)}
-                                                disabled={savingTaskId === task.id || isPast}
-                                                style={{ display: 'none' }}
-                                            />
-                                            {savingTaskId === task.id && !task.is_completed ? (
-                                                <span className="spinner-border spinner-border-sm"></span>
-                                            ) : (
-                                                <i className="ri-close-line" style={{ fontSize: '32px' }}></i>
-                                            )}
-                                        </label>
-                                    </div>
-
-                                    {/* Status Badge */}
-                                    <div className="mt-3">
-                                        {task.is_completed ? (
-                                            <span className="badge bg-success" style={{ borderRadius: '10px', padding: '8px 16px' }}>
-                                                <i className="ri-checkbox-circle-fill me-1"></i>
-                                                Bajarildi
-                                            </span>
-                                        ) : (
-                                            <span className="badge bg-warning" style={{ borderRadius: '10px', padding: '8px 16px' }}>
-                                                <i className="ri-time-line me-1"></i>
-                                                Kutilmoqda
-                                            </span>
-                                        )}
-                                    </div>
+                                        ❌
+                                    </label>
                                 </div>
                             </div>
                         </div>
                     ))}
                 </div>
-            )}
 
-            {/* Past Date Warning */}
-            {isPast && (
-                <div className="alert alert-warning mt-4 border-0 shadow-sm" style={{ borderRadius: '15px' }}>
-                    <i className="ri-information-line me-2"></i>
-                    <strong>Diqqat!</strong> O'tgan kunlar uchun vazifalarni o'zgartirish mumkin emas.
-                </div>
-            )}
+                <button
+                    onClick={() => {
+                        if (!userName.trim()) {
+                            alert('Iltimos, ismingizni kiriting!');
+                            return;
+                        }
 
-            {/* Add Task Modal */}
-            {showAddModal && (
-                <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-                    <div className="modal-dialog modal-dialog-centered modal-lg">
-                        <div className="modal-content border-0 shadow-lg" style={{ borderRadius: '20px' }}>
-                            <div className="modal-header border-0" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '20px 20px 0 0' }}>
-                                <h5 className="modal-title text-white">
-                                    <i className="ri-add-circle-line me-2"></i>
-                                    Yangi vazifa qo'shish
-                                </h5>
-                                <button
-                                    type="button"
-                                    className="btn-close btn-close-white"
-                                    onClick={() => setShowAddModal(false)}
-                                ></button>
-                            </div>
-                            <form onSubmit={handleAddTask}>
-                                <div className="modal-body p-4">
-                                    {/* Emoji Selection */}
-                                    <div className="mb-4">
-                                        <label className="form-label fw-bold">
-                                            <i className="ri-emotion-line me-2"></i>
-                                            Emoji tanlang
-                                        </label>
-                                        <div className="p-3 border rounded" style={{ maxHeight: '200px', overflowY: 'auto', borderRadius: '15px' }}>
-                                            <div className="d-flex flex-wrap gap-2">
-                                                {emojiList.map((emoji) => (
-                                                    <button
-                                                        key={emoji}
-                                                        type="button"
-                                                        className={`btn ${
-                                                            newTask.emoji === emoji ? 'btn-primary' : 'btn-outline-secondary'
-                                                        }`}
-                                                        style={{ 
-                                                            fontSize: '28px', 
-                                                            width: '60px', 
-                                                            height: '60px',
-                                                            borderRadius: '12px'
-                                                        }}
-                                                        onClick={() => setNewTask({ ...newTask, emoji })}
-                                                    >
-                                                        {emoji}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
+                        const incompleteTasks = tasks.filter(t => t.is_completed === null);
+                        if (incompleteTasks.length > 0) {
+                            alert('Iltimos, barcha vazifalar uchun javob tanlang!');
+                            return;
+                        }
 
-                                    {/* Task Name */}
-                                    <div className="mb-4">
-                                        <label className="form-label fw-bold">
-                                            <i className="ri-text me-2"></i>
-                                            Vazifa nomi *
-                                        </label>
-                                        <input
-                                            type="text"
-                                            className="form-control form-control-lg"
-                                            style={{ borderRadius: '12px' }}
-                                            placeholder="Masalan: Kitob o'qish"
-                                            value={newTask.name}
-                                            onChange={(e) => setNewTask({ ...newTask, name: e.target.value })}
-                                            required
-                                        />
-                                    </div>
+                        alert('Muvaffaqiyatli yuborildi! ✅');
+                        fetchMonthlyStats();
+                    }}
+                    style={{
+                        width: '100%',
+                        padding: '18px',
+                        fontSize: '18px',
+                        fontWeight: '600',
+                        border: 'none',
+                        borderRadius: '15px',
+                        background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
+                        color: 'white',
+                        cursor: 'pointer',
+                        boxShadow: '0 10px 25px rgba(102, 126, 234, 0.3)',
+                        transition: 'all 0.3s ease',
+                        marginBottom: '20px'
+                    }}
+                >
+                    Yuborish
+                </button>
+            </div>
 
-                                    {/* Description */}
-                                    <div className="mb-4">
-                                        <label className="form-label fw-bold">
-                                            <i className="ri-file-text-line me-2"></i>
-                                            Tavsif (ixtiyoriy)
-                                        </label>
-                                        <textarea
-                                            className="form-control"
-                                            style={{ borderRadius: '12px' }}
-                                            rows="3"
-                                            placeholder="Vazifa haqida qo'shimcha ma'lumot..."
-                                            value={newTask.description}
-                                            onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                                        ></textarea>
-                                    </div>
-
-                                    {/* Preview */}
-                                    <div className="alert alert-info border-0" style={{ borderRadius: '12px' }}>
-                                        <strong>Ko'rinishi:</strong>
-                                        <div className="mt-2 p-3 bg-white rounded text-center">
-                                            <div style={{ fontSize: '48px' }}>{newTask.emoji}</div>
-                                            <h6 className="mt-2">{newTask.name || '(Vazifa nomi)'}</h6>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="modal-footer border-0 p-4">
-                                    <button
-                                        type="button"
-                                        className="btn btn-lg btn-secondary"
-                                        style={{ borderRadius: '12px' }}
-                                        onClick={() => setShowAddModal(false)}
-                                        disabled={addingTask}
-                                    >
-                                        <i className="ri-close-line me-2"></i>
-                                        Bekor qilish
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="btn btn-lg btn-primary"
-                                        style={{ borderRadius: '12px' }}
-                                        disabled={addingTask}
-                                    >
-                                        {addingTask ? (
-                                            <>
-                                                <span className="spinner-border spinner-border-sm me-2"></span>
-                                                Saqlanmoqda...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <i className="ri-save-line me-2"></i>
-                                                Saqlash
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <style>{`
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `}</style>
         </div>
     );
 }
