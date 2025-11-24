@@ -7,6 +7,7 @@ import Topshiriqlar from '../Pages/Topshiriqlar';
 import QuizPage from '../Quiz/QuizPage';
 import Kitobxonlik from '../Pages/Kitobxonlik';
 import KunlikVazifalar from '../Pages/KunlikVazifalar';
+import Profile from '../Pages/Profile';
 
 function Layout({ user, onLogout }) {
     const [currentPage, setCurrentPage] = useState('dashboard');
@@ -26,7 +27,7 @@ function Layout({ user, onLogout }) {
     useEffect(() => {
         const handleHashChange = () => {
             const hash = window.location.hash.slice(1); // "#" ni olib tashlash
-            
+
             if (hash.startsWith('quiz/')) {
                 const parts = hash.split('/');
                 if (parts.length === 3) {
@@ -43,7 +44,7 @@ function Layout({ user, onLogout }) {
 
         handleHashChange();
         window.addEventListener('hashchange', handleHashChange);
-        
+
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, []);
 
@@ -74,7 +75,7 @@ function Layout({ user, onLogout }) {
                 return <KunlikVazifalar />;
             case 'quiz':
                 return quizParams ? (
-                    <QuizPage 
+                    <QuizPage
                         quizId={quizParams.quizId}
                         subjectId={quizParams.subjectId}
                         onBack={handleQuizBack}
@@ -82,6 +83,8 @@ function Layout({ user, onLogout }) {
                 ) : (
                     <Dashboard user={user} />
                 );
+            case 'profil':
+                return <Profile />;
             default:
                 return <Dashboard user={user} />;
         }
@@ -99,15 +102,15 @@ function Layout({ user, onLogout }) {
             />
 
             {/* Layout Overlay - menu ochiq bo'lsa ko'rinadi */}
-            <div 
+            <div
                 className={`layout-overlay ${isMobileMenuOpen ? 'layout-overlay-active' : ''}`}
                 onClick={() => setIsMobileMenuOpen(false)}
             ></div>
 
             {/* Main Content */}
             <div className="layout-page">
-                <Navbar 
-                    user={user} 
+                <Navbar
+                    user={user}
                     onLogout={onLogout}
                     onToggleMobileMenu={toggleMobileMenu}
                 />

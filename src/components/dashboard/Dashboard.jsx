@@ -78,7 +78,7 @@ function Dashboard({ user }) {
                         <i className="ri-error-warning-line" style={{ fontSize: '60px', color: '#dc3545' }}></i>
                         <h5 style={{ marginTop: '20px', color: '#dc3545' }}>Xatolik yuz berdi!</h5>
                         <p style={{ color: '#666', marginTop: '10px' }}>{error}</p>
-                        <button 
+                        <button
                             onClick={fetchQuizzes}
                             style={{
                                 marginTop: '20px',
@@ -119,14 +119,14 @@ function Dashboard({ user }) {
                         transition: 'all 0.3s ease',
                         cursor: 'pointer'
                     }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-4px)';
-                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
-                    }}>
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'translateY(-4px)';
+                            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+                        }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                             <div style={{
                                 width: '48px',
@@ -141,7 +141,7 @@ function Dashboard({ user }) {
                             }}>
                                 📋
                             </div>
-                            <span style={{ color: '#28a745', fontSize: '14px', fontWeight: '600' }}>+22%</span>
+                            {/* <span style={{ color: '#28a745', fontSize: '14px', fontWeight: '600' }}>+22%</span> */}
                         </div>
                         <h2 style={{ fontSize: '36px', fontWeight: '700', color: '#667eea', margin: '0 0 8px 0' }}>
                             {statistics?.total || 0}
@@ -159,14 +159,14 @@ function Dashboard({ user }) {
                         transition: 'all 0.3s ease',
                         cursor: 'pointer'
                     }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-4px)';
-                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
-                    }}>
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'translateY(-4px)';
+                            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+                        }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                             <div style={{
                                 width: '48px',
@@ -181,7 +181,7 @@ function Dashboard({ user }) {
                             }}>
                                 ✅
                             </div>
-                            <span style={{ color: '#28a745', fontSize: '14px', fontWeight: '600' }}>+38%</span>
+                            {/* <span style={{ color: '#28a745', fontSize: '14px', fontWeight: '600' }}>+38%</span> */}
                         </div>
                         <h2 style={{ fontSize: '36px', fontWeight: '700', color: '#28a745', margin: '0 0 8px 0' }}>
                             {statistics?.completed || 0}
@@ -199,14 +199,14 @@ function Dashboard({ user }) {
                         transition: 'all 0.3s ease',
                         cursor: 'pointer'
                     }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-4px)';
-                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
-                    }}>
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'translateY(-4px)';
+                            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+                        }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                             <div style={{
                                 width: '48px',
@@ -221,7 +221,7 @@ function Dashboard({ user }) {
                             }}>
                                 ⏳
                             </div>
-                            <span style={{ color: '#ffc107', fontSize: '14px', fontWeight: '600' }}>-12%</span>
+                            {/* <span style={{ color: '#ffc107', fontSize: '14px', fontWeight: '600' }}>-12%</span> */}
                         </div>
                         <h2 style={{ fontSize: '36px', fontWeight: '700', color: '#ffc107', margin: '0 0 8px 0' }}>
                             {(statistics?.total || 0) - (statistics?.completed || 0)}
@@ -239,14 +239,14 @@ function Dashboard({ user }) {
                         transition: 'all 0.3s ease',
                         cursor: 'pointer'
                     }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-4px)';
-                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
-                    }}>
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'translateY(-4px)';
+                            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+                        }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                             <div style={{
                                 width: '48px',
@@ -261,7 +261,7 @@ function Dashboard({ user }) {
                             }}>
                                 📊
                             </div>
-                            <span style={{ color: '#28a745', fontSize: '14px', fontWeight: '600' }}>+5%</span>
+                            {/* <span style={{ color: '#28a745', fontSize: '14px', fontWeight: '600' }}>+5%</span> */}
                         </div>
                         <h2 style={{ fontSize: '36px', fontWeight: '700', color: '#007bff', margin: '0 0 8px 0' }}>
                             {statistics?.total ? Math.round((statistics.completed / statistics.total) * 100) : 0}%
@@ -284,7 +284,7 @@ function Dashboard({ user }) {
                 }}>
                     <div>
                         <h1 style={{ fontSize: '32px', fontWeight: '700', color: '#333', marginBottom: '12px' }}>
-                            Xush kelibsiz, <span style={{ color: '#667eea' }}>{user?.name}!</span> 🎉
+                            Xush kelibsiz, <span style={{ color: '#667eea' }}>{user?.first_name + " " + user?.last_name}!</span> 🎉
                         </h1>
                         <p style={{ color: '#666', fontSize: '16px', marginBottom: '8px' }}>
                             Siz muvaffaqiyatli tizimga kirdingiz.
@@ -318,7 +318,7 @@ function Dashboard({ user }) {
                             <i className="ri-file-list-3-line" style={{ marginRight: '10px', color: '#667eea' }}></i>
                             Mavjud Quizlar
                         </h5>
-                        <button 
+                        <button
                             onClick={fetchQuizzes}
                             style={{
                                 padding: '10px 20px',
@@ -342,7 +342,7 @@ function Dashboard({ user }) {
                             <i className="ri-refresh-line"></i> Yangilash
                         </button>
                     </div>
-                    
+
                     {/* Mobile & Desktop Responsive */}
                     <div style={{ padding: '24px', overflowX: 'auto' }}>
                         {quizzes.length === 0 ? (
@@ -355,9 +355,9 @@ function Dashboard({ user }) {
                             <div style={{ display: 'grid', gap: '16px' }}>
                                 {quizzes.map(quiz => {
                                     const status = getQuizStatus(quiz);
-                                    
+
                                     return (
-                                        <div 
+                                        <div
                                             key={quiz.id}
                                             style={{
                                                 background: '#f8f9fa',
@@ -472,9 +472,9 @@ function Dashboard({ user }) {
                                                         padding: '8px 16px',
                                                         borderRadius: '8px',
                                                         background: status.class === 'bg-success' ? '#28a745' :
-                                                                   status.class === 'bg-danger' ? '#dc3545' :
-                                                                   status.class === 'bg-warning' ? '#ffc107' :
-                                                                   status.class === 'bg-info' ? '#17a2b8' : '#6c757d',
+                                                            status.class === 'bg-danger' ? '#dc3545' :
+                                                                status.class === 'bg-warning' ? '#ffc107' :
+                                                                    status.class === 'bg-info' ? '#17a2b8' : '#6c757d',
                                                         color: 'white',
                                                         fontSize: '14px',
                                                         fontWeight: '600'
