@@ -1,4 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
+import { 
+    BookOpen, Clock, CheckCircle, XCircle, AlertCircle, 
+    HelpCircle, Flag, ArrowLeft, ArrowRight, Send, 
+    CheckSquare, RotateCcw, LayoutGrid, Award, Timer, 
+    ChevronRight, ChevronLeft, Check, AlertTriangle 
+} from 'lucide-react';
+const API_BASE_URL = 'http://localhost:8000';
+
+
+// ==========================================
+// ⚙️ SOZLAMALAR (CONFIG)
+// ==========================================
 
 function QuizPage({ quizId, subjectId, onBack }) {
     const [loading, setLoading] = useState(true);
@@ -16,19 +28,13 @@ function QuizPage({ quizId, subjectId, onBack }) {
     // ✅ Rasm URL'ini to'g'rilash funksiyasi
     const getImageUrl = (imagePath) => {
         if (!imagePath) return null;
-        
-        // Agar to'liq URL bo'lsa, o'zini qaytaradi
         if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
             return imagePath;
         }
-        
-        // Agar storage/ bilan boshlansa
         if (imagePath.startsWith('storage/')) {
-            return `https://quizvds-production.up.railway.app/${imagePath}`;
+            return `${API_BASE_URL}/${imagePath}`;
         }
-        
-        // Boshqa holatlarda storage/ qo'shadi
-        return `https://quizvds-production.up.railway.app/storage/${imagePath}`;
+        return `${API_BASE_URL}/storage/${imagePath}`;
     };
 
     const saveState = useCallback(() => {
@@ -81,7 +87,7 @@ function QuizPage({ quizId, subjectId, onBack }) {
             setError(null);
 
             const token = localStorage.getItem('token');
-            const response = await fetch(`https://quizvds-production.up.railway.app/api/quiz/${quizId}/start`, {
+            const response = await fetch(`${API_BASE_URL}/api/quiz/${quizId}/start`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'application/json'
@@ -97,7 +103,6 @@ function QuizPage({ quizId, subjectId, onBack }) {
             if (data.success) {
                 setQuiz(data.data.quiz_details);
                 
-                // ✅ Rasmlarni to'g'rilangan holda saqlash
                 const processedQuestions = data.data.questions.map(q => ({
                     ...q,
                     image: getImageUrl(q.image)
@@ -126,8 +131,6 @@ function QuizPage({ quizId, subjectId, onBack }) {
                         if (parsedState.timeLeft > 0) {
                             setTimeLeft(parsedState.timeLeft);
                         }
-
-                        console.log("Quiz holati LocalStorage'dan tiklandi.");
                     } catch (e) {
                         console.error("Saqlangan progressni yuklashda xatolik:", e);
                         localStorage.removeItem(`quiz_progress_${quizId}`);
@@ -178,7 +181,7 @@ function QuizPage({ quizId, subjectId, onBack }) {
 
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`https://quizvds-production.up.railway.app/api/quiz/${quizId}/submit`, {
+            const response = await fetch(`${API_BASE_URL}/api/quiz/${quizId}/submit`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -195,7 +198,6 @@ function QuizPage({ quizId, subjectId, onBack }) {
             if (data.success) {
                 clearState();
                 
-                // ✅ Natija rasmlarini ham to'g'rilash
                 if (data.data.detailed_results) {
                     data.data.detailed_results = data.data.detailed_results.map(result => ({
                         ...result,
@@ -240,195 +242,131 @@ function QuizPage({ quizId, subjectId, onBack }) {
         const { score, total_questions, percentage, passed, detailed_results } = quizResult;
 
         return (
-            <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
-                <div className="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
-                    <div className="modal-content border-0 shadow-lg">
-                        <div className={`modal-header ${passed ? 'bg-success' : 'bg-danger'} text-white border-0`}>
-                            <div className="w-100 text-center">
-                                <h3 className="modal-title mb-2 fw-bold text-white">
-                                    {passed ? (
-                                        <>🎉 Tabriklaymiz!</>
-                                    ) : (
-                                        <>😔 Test yakunlandi</>
-                                    )}
-                                </h3>
-                                <p className="mb-0 text-white-50">
-                                    {passed
-                                        ? "Siz testdan muvaffaqiyatli o'tdingiz!"
-                                        : 'Keyingi safar omad tilaymiz!'}
-                                </p>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+                    {/* Modal Header */}
+                    <div className={`p-6 text-center ${passed ? 'bg-green-500' : 'bg-red-500'} text-white`}>
+                        <div className="flex justify-center mb-3">
+                            {passed ? 
+                                <Award className="w-16 h-16 text-white animate-bounce" /> : 
+                                <AlertTriangle className="w-16 h-16 text-white" />
+                            }
+                        </div>
+                        <h2 className="text-2xl font-bold mb-1">
+                            {passed ? "Tabriklaymiz! Muvaffaqiyatli o'tdingiz!" : "Afsuski, testdan o'ta olmadingiz"}
+                        </h2>
+                        <p className="text-white/90 text-sm">
+                            {passed ? "Siz ajoyib natija ko'rsatdingiz!" : "Keyingi safar albatta uddalaysiz!"}
+                        </p>
+                    </div>
+
+                    {/* Modal Body */}
+                    <div className="p-6 overflow-y-auto bg-gray-50 flex-1">
+                        {/* Stats Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                            <div className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm flex flex-col items-center justify-center">
+                                <CheckCircle className="w-8 h-8 text-blue-500 mb-2" />
+                                <div className="text-3xl font-bold text-blue-600">{score} / {total_questions}</div>
+                                <div className="text-xs text-gray-500 font-medium uppercase tracking-wider">To'g'ri Javoblar</div>
+                            </div>
+                            
+                            <div className="bg-white p-4 rounded-xl border border-orange-100 shadow-sm flex flex-col items-center justify-center">
+                                <div className="w-8 h-8 flex items-center justify-center rounded-full bg-orange-100 text-orange-500 font-bold mb-2">%</div>
+                                <div className="text-3xl font-bold text-orange-600">{percentage}%</div>
+                                <div className="text-xs text-gray-500 font-medium uppercase tracking-wider">Umumiy Natija</div>
+                            </div>
+
+                            <div className={`bg-white p-4 rounded-xl border shadow-sm flex flex-col items-center justify-center ${passed ? 'border-green-100' : 'border-red-100'}`}>
+                                {passed ? 
+                                    <CheckSquare className="w-8 h-8 text-green-500 mb-2" /> : 
+                                    <XCircle className="w-8 h-8 text-red-500 mb-2" />
+                                }
+                                <div className={`text-3xl font-bold ${passed ? 'text-green-600' : 'text-red-600'}`}>
+                                    {passed ? "O'tdingiz" : "Yiqildingiz"}
+                                </div>
+                                <div className="text-xs text-gray-500 font-medium uppercase tracking-wider">
+                                    {passed ? '70% dan yuqori' : '70% dan past'}
+                                </div>
                             </div>
                         </div>
 
-                        <div className="modal-body p-4" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-                            <div className="row g-4 mb-4">
-                                <div className="col-md-4">
-                                    <div className="card border-0 bg-primary bg-opacity-10 h-100">
-                                        <div className="card-body text-center">
-                                            <div className="text-primary mb-3" style={{ fontSize: '3rem' }}>✓</div>
-                                            <h2 className="fw-bold text-primary mb-1">{score}/{total_questions}</h2>
-                                            <p className="text-muted mb-0">To'g'ri javoblar</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="col-md-4">
-                                    <div className="card border-0 bg-warning bg-opacity-10 h-100">
-                                        <div className="card-body text-center">
-                                            <div className="text-warning mb-3" style={{ fontSize: '3rem' }}>%</div>
-                                            <h2 className="fw-bold text-warning mb-1">{percentage}%</h2>
-                                            <p className="text-muted mb-0">Natija</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="col-md-4">
-                                    <div className={`card border-0 ${passed ? 'bg-success' : 'bg-danger'} bg-opacity-10 h-100`}>
-                                        <div className="card-body text-center">
-                                            <div className={`${passed ? 'text-success' : 'text-danger'} mb-3`} style={{ fontSize: '3rem' }}>
-                                                {passed ? '😊' : '😢'}
-                                            </div>
-                                            <h2 className={`fw-bold ${passed ? 'text-success' : 'text-danger'} mb-1`}>
-                                                {passed ? "O'tdingiz" : 'Topshirilmadi'}
-                                            </h2>
-                                            <p className="text-muted mb-0">
-                                                {passed ? '70% dan yuqori' : '70% kerak edi'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                        <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <LayoutGrid className="w-5 h-5 text-gray-500" />
+                            Batafsil tahlil
+                        </h3>
 
-                            <div className="mb-4">
-                                <div className="d-flex justify-content-between mb-2">
-                                    <span className="fw-semibold">To'g'ri javoblar</span>
-                                    <span className="fw-semibold">{score} / {total_questions}</span>
-                                </div>
-                                <div className="progress" style={{ height: '20px' }}>
-                                    <div
-                                        className={`progress-bar ${passed ? 'bg-success' : 'bg-danger'}`}
-                                        style={{ width: `${percentage}%` }}
-                                    >
-                                        <strong>{percentage}%</strong>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <hr className="my-4" />
-
-                            <h5 className="mb-3 fw-bold">
-                                📋 Batafsil natijalar
-                            </h5>
-
+                        <div className="space-y-4">
                             {detailed_results && detailed_results.map((result, index) => {
                                 const question = questions.find(q => q.id === result.question_id);
                                 const letters = ['A', 'B', 'C', 'D'];
 
                                 return (
-                                    <div className={`card mb-3 border-2 ${result.is_correct ? 'border-success' : 'border-danger'}`} key={result.question_id}>
-                                        <div className={`card-header ${result.is_correct ? 'bg-success bg-opacity-10' : 'bg-danger bg-opacity-10'}`}>
-                                            <div className="d-flex align-items-center justify-content-between">
-                                                <div className="d-flex align-items-center flex-grow-1">
-                                                    <span className={`badge ${result.is_correct ? 'bg-success' : 'bg-danger'} me-3 px-3 py-2`}>
-                                                        {index + 1}
-                                                    </span>
-                                                    <h6 className="mb-0">
-                                                        {question?.name?.replace(/<[^>]*>/g, '').substring(0, 80)}...
-                                                    </h6>
-                                                </div>
-                                                <div className={`${result.is_correct ? 'text-success' : 'text-danger'} fs-3`}>
-                                                    {result.is_correct ? '✓' : '✗'}
+                                    <div key={result.question_id} className={`bg-white border-l-4 rounded-r-xl shadow-sm overflow-hidden ${result.is_correct ? 'border-green-500' : 'border-red-500'}`}>
+                                        <div className="p-4 border-b border-gray-100 flex justify-between items-start bg-gray-50/50">
+                                            <div className="flex gap-3">
+                                                <span className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-sm font-bold ${result.is_correct ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                    {index + 1}
+                                                </span>
+                                                <div>
+                                                    <div className="font-medium text-gray-800 mb-1" dangerouslySetInnerHTML={{ __html: question?.name }} />
                                                 </div>
                                             </div>
+                                            {result.is_correct ? 
+                                                <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0" /> : 
+                                                <XCircle className="w-6 h-6 text-red-500 flex-shrink-0" />
+                                            }
                                         </div>
 
-                                        <div className="card-body">
-                                            <div className="mb-3">
-                                                <strong className="d-block mb-2 text-primary">
-                                                    ❓ Savol:
-                                                </strong>
-                                                <div
-                                                    className="p-3 bg-light rounded"
-                                                    dangerouslySetInnerHTML={{ __html: question?.name }}
+                                        {question?.image && (
+                                            <div className="px-4 pt-4">
+                                                <img 
+                                                    src={question.image} 
+                                                    alt="Question" 
+                                                    className="max-h-48 object-contain rounded-lg border border-gray-200"
+                                                    onError={(e) => e.target.style.display = 'none'}
                                                 />
                                             </div>
+                                        )}
 
-                                            {/* ✅ Rasm ko'rsatish */}
-                                            {question?.image && (
-                                                <div className="mb-3 text-center">
-                                                    <img
-                                                        src={question.image}
-                                                        alt="Savol rasmi"
-                                                        className="img-fluid rounded shadow-sm"
-                                                        style={{ maxHeight: '300px', objectFit: 'contain' }}
-                                                        onError={(e) => {
-                                                            console.error('Rasm yuklanmadi:', question.image);
-                                                            e.target.style.display = 'none';
-                                                        }}
-                                                    />
-                                                </div>
-                                            )}
+                                        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            {question?.options?.map((option, optIdx) => {
+                                                const isCorrect = option.id === result.correct_option_id;
+                                                const isSelected = option.id === result.selected_option_id;
+                                                
+                                                let optionClass = "border border-gray-200 bg-white";
+                                                if (isCorrect) optionClass = "border-green-500 bg-green-50 text-green-900";
+                                                else if (isSelected && !isCorrect) optionClass = "border-red-500 bg-red-50 text-red-900";
 
-                                            <div className="row g-3">
-                                                {question?.options?.map((option, optIdx) => {
-                                                    const isCorrect = option.id === result.correct_option_id;
-                                                    const isSelected = option.id === result.selected_option_id;
-
-                                                    return (
-                                                        <div className="col-md-6" key={option.id}>
-                                                            <div
-                                                                className={`card ${isCorrect ? 'border-success border-2 bg-success bg-opacity-10' :
-                                                                        isSelected && !isCorrect ? 'border-danger border-2 bg-danger bg-opacity-10' :
-                                                                            'border'
-                                                                    }`}
-                                                            >
-                                                                <div className="card-body p-3">
-                                                                    <div className="d-flex align-items-start">
-                                                                        <span className={`badge ${isCorrect ? 'bg-success' :
-                                                                                isSelected ? 'bg-danger' :
-                                                                                    'bg-secondary'
-                                                                            } me-2 px-2 py-1`}>
-                                                                            {letters[optIdx]}
-                                                                        </span>
-                                                                        <div className="flex-grow-1">
-                                                                            <div dangerouslySetInnerHTML={{ __html: option.name }} />
-                                                                            {isCorrect && (
-                                                                                <div className="mt-2">
-                                                                                    <span className="badge bg-success">
-                                                                                        ✓ To'g'ri javob
-                                                                                    </span>
-                                                                                </div>
-                                                                            )}
-                                                                            {isSelected && !isCorrect && (
-                                                                                <div className="mt-2">
-                                                                                    <span className="badge bg-danger">
-                                                                                        ✗ Sizning javobingiz
-                                                                                    </span>
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
+                                                return (
+                                                    <div key={option.id} className={`p-3 rounded-lg flex items-center gap-3 text-sm ${optionClass}`}>
+                                                        <span className={`w-6 h-6 flex items-center justify-center rounded text-xs font-bold ${isCorrect ? 'bg-green-200 text-green-800' : (isSelected ? 'bg-red-200 text-red-800' : 'bg-gray-100 text-gray-600')}`}>
+                                                            {letters[optIdx]}
+                                                        </span>
+                                                        <div dangerouslySetInnerHTML={{ __html: option.name }} />
+                                                        {isCorrect && <Check className="w-4 h-4 text-green-600 ml-auto" />}
+                                                        {isSelected && !isCorrect && <XCircle className="w-4 h-4 text-red-600 ml-auto" />}
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 );
                             })}
                         </div>
+                    </div>
 
-                        <div className="modal-footer border-0 bg-light">
-                            <button
-                                className="btn btn-primary btn-lg px-5"
-                                onClick={() => {
-                                    setShowResultModal(false);
-                                    if (onBack) onBack();
-                                }}
-                            >
-                                ← Bosh sahifaga qaytish
-                            </button>
-                        </div>
+                    {/* Modal Footer */}
+                    <div className="p-4 border-t border-gray-200 bg-white flex justify-center">
+                        <button
+                            onClick={() => {
+                                setShowResultModal(false);
+                                if (onBack) onBack();
+                            }}
+                            className="flex items-center gap-2 px-8 py-3 bg-gray-800 text-white rounded-xl font-semibold hover:bg-gray-900 transition-colors shadow-lg"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                            Bosh sahifaga qaytish
+                        </button>
                     </div>
                 </div>
             </div>
@@ -437,12 +375,10 @@ function QuizPage({ quizId, subjectId, onBack }) {
 
     if (loading) {
         return (
-            <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
+            <div className="min-h-screen bg-gray-50 flex justify-center items-center p-5">
                 <div className="text-center">
-                    <div className="spinner-border text-primary mb-3" role="status" style={{ width: '3rem', height: '3rem' }}>
-                        <span className="visually-hidden">Yuklanmoqda...</span>
-                    </div>
-                    <h5 className="text-muted">Quiz yuklanmoqda...</h5>
+                    <div className="w-12 h-12 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mx-auto mb-4"></div>
+                    <h5 className="text-gray-600 font-medium">Quiz yuklanmoqda...</h5>
                 </div>
             </div>
         );
@@ -450,12 +386,18 @@ function QuizPage({ quizId, subjectId, onBack }) {
 
     if (error) {
         return (
-            <div className="alert alert-danger">
-                <h4>⚠️ Xatolik</h4>
-                <p>{error}</p>
-                <button className="btn btn-primary" onClick={onBack}>
-                    ← Orqaga
-                </button>
+            <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
+                <div className="bg-white p-8 rounded-2xl shadow-lg max-w-md w-full text-center">
+                    <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">Xatolik yuz berdi</h3>
+                    <p className="text-gray-600 mb-6">{error}</p>
+                    <button 
+                        onClick={onBack}
+                        className="px-6 py-3 bg-gray-800 text-white rounded-xl font-semibold hover:bg-gray-900 transition-colors w-full"
+                    >
+                        Orqaga qaytish
+                    </button>
+                </div>
             </div>
         );
     }
@@ -463,110 +405,88 @@ function QuizPage({ quizId, subjectId, onBack }) {
     const currentQuestion = questions[currentQuestionIndex];
 
     return (
-        <>
+        <div className="min-h-screen bg-gray-50 p-4 lg:p-6">
             {showResultModal && <ResultModal />}
 
-            <div className="row g-4">
-                <div className="col-lg-9">
-                    <div className="card shadow-sm border-0">
-                        <div className="card-header d-flex justify-content-between align-items-center bg-primary text-white py-3">
+            <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-6">
+                {/* Left/Top: Question Area */}
+                <div className="lg:col-span-3 space-y-6">
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        {/* Question Header */}
+                        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-4 text-white flex flex-wrap justify-between items-center gap-4">
                             <div>
-                                <h5 className="mb-1 text-white fw-bold">
-                                    📝 Savol {currentQuestionIndex + 1} / {questions.length}
-                                </h5>
-                                <small className="text-white-50">
-                                    📚 {quiz?.name} - {quiz?.subject?.name}
-                                </small>
-                            </div>
-                            <div className="d-flex align-items-center gap-3">
-                                <div className="form-check form-switch mb-0">
-                                    <input
-                                        className="form-check-input"
-                                        type="checkbox"
-                                        checked={markedForReview[currentQuestion?.id] || false}
-                                        onChange={() => toggleMarkForReview(currentQuestion?.id)}
-                                        id="markReview"
-                                    />
-                                    <label className="form-check-label text-white" htmlFor="markReview">
-                                        🔖 Ko'rib chiqish uchun belgilash
-                                    </label>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <HelpCircle className="w-5 h-5 text-blue-200" />
+                                    <span className="font-medium text-blue-100">Savol {currentQuestionIndex + 1} / {questions.length}</span>
                                 </div>
+                                <h2 className="font-bold text-lg flex items-center gap-2">
+                                    <BookOpen className="w-5 h-5" />
+                                    {quiz?.name}
+                                </h2>
                             </div>
+                            
+                            <button 
+                                onClick={() => toggleMarkForReview(currentQuestion?.id)}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                                    markedForReview[currentQuestion?.id] 
+                                    ? 'bg-yellow-400 text-yellow-900 font-bold' 
+                                    : 'bg-white/10 hover:bg-white/20 text-white'
+                                }`}
+                            >
+                                <Flag className="w-4 h-4" />
+                                <span className="text-sm">Belgilash</span>
+                            </button>
                         </div>
 
-                        <div className="card-body p-4">
-                            <div className="mb-4">
-                                <div className="d-flex align-items-start mb-3">
-                                    <div className="badge bg-primary me-3 px-3 py-2 fs-6">
-                                        {currentQuestionIndex + 1}
-                                    </div>
-                                    <h5 className="mb-0 flex-grow-1" dangerouslySetInnerHTML={{ __html: currentQuestion?.name }} />
+                        {/* Question Content */}
+                        <div className="p-6">
+                            <div className="text-lg text-gray-800 font-medium mb-6 leading-relaxed" dangerouslySetInnerHTML={{ __html: currentQuestion?.name }} />
+
+                            {currentQuestion?.image && (
+                                <div className="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100 text-center">
+                                    <img
+                                        src={currentQuestion.image}
+                                        alt="Savol rasmi"
+                                        className="max-h-[400px] max-w-full object-contain mx-auto rounded-lg shadow-sm"
+                                        onError={(e) => {
+                                            console.error('Rasm yuklanmadi:', currentQuestion.image);
+                                            e.target.style.display = 'none';
+                                        }}
+                                    />
                                 </div>
+                            )}
 
-                                {/* ✅ Rasm ko'rsatish - Yaxshilangan */}
-                                {currentQuestion?.image && (
-                                    <div className="text-center mb-4">
-                                        <img
-                                            src={currentQuestion.image}
-                                            alt="Savol rasmi"
-                                            className="img-fluid rounded shadow-sm"
-                                            style={{ 
-                                                maxWidth: '100%', 
-                                                maxHeight: '400px', 
-                                                objectFit: 'contain',
-                                                border: '2px solid #e0e0e0',
-                                                padding: '10px',
-                                                backgroundColor: '#f8f9fa'
-                                            }}
-                                            onError={(e) => {
-                                                console.error('Rasm yuklanmadi:', currentQuestion.image);
-                                                e.target.style.display = 'none';
-                                                e.target.insertAdjacentHTML('afterend', 
-                                                    '<div class="alert alert-warning">⚠️ Rasm yuklanmadi</div>'
-                                                );
-                                            }}
-                                            onLoad={() => {
-                                                console.log('Rasm muvaffaqiyatli yuklandi:', currentQuestion.image);
-                                            }}
-                                        />
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="row g-3">
+                            {/* Options */}
+                            <div className="grid grid-cols-1 gap-3">
                                 {currentQuestion?.options?.map((option, idx) => {
                                     const isSelected = answers[currentQuestion.id] === option.id;
                                     const letters = ['A', 'B', 'C', 'D'];
 
                                     return (
-                                        <div className="col-12" key={option.id}>
-                                            <div
-                                                className={`card cursor-pointer h-100 ${isSelected ? 'border-primary border-3 shadow' : 'border'}`}
-                                                onClick={() => handleAnswerSelect(currentQuestion.id, option.id)}
-                                                style={{
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s',
-                                                    backgroundColor: isSelected ? '#f0f7ff' : 'transparent'
-                                                }}
-                                            >
-                                                <div className="card-body p-3">
-                                                    <div className="form-check mb-0 d-flex align-items-start">
-                                                        <input
-                                                            className="form-check-input mt-1 me-3"
-                                                            type="radio"
-                                                            name={`question-${currentQuestion.id}`}
-                                                            id={`option-${option.id}`}
-                                                            checked={isSelected}
-                                                            onChange={() => handleAnswerSelect(currentQuestion.id, option.id)}
-                                                        />
-                                                        <label className="form-check-label fw-semibold w-100" htmlFor={`option-${option.id}`}>
-                                                            <span className={`badge ${isSelected ? 'bg-primary' : 'bg-secondary'} me-2`}>
-                                                                {letters[idx]}
-                                                            </span>
-                                                            <span dangerouslySetInnerHTML={{ __html: option.name }} />
-                                                        </label>
-                                                    </div>
-                                                </div>
+                                        <div 
+                                            key={option.id}
+                                            onClick={() => handleAnswerSelect(currentQuestion.id, option.id)}
+                                            className={`
+                                                relative group p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 flex items-start gap-4
+                                                ${isSelected 
+                                                    ? 'border-blue-500 bg-blue-50 shadow-md' 
+                                                    : 'border-gray-200 hover:border-blue-200 hover:bg-gray-50'}
+                                            `}
+                                        >
+                                            <div className={`
+                                                w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg text-sm font-bold transition-colors
+                                                ${isSelected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-500 group-hover:bg-blue-100 group-hover:text-blue-600'}
+                                            `}>
+                                                {letters[idx]}
+                                            </div>
+                                            <div className={`flex-1 text-base ${isSelected ? 'text-blue-900 font-medium' : 'text-gray-700'}`} dangerouslySetInnerHTML={{ __html: option.name }} />
+                                            
+                                            {/* Radio circle visual */}
+                                            <div className={`
+                                                w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1
+                                                ${isSelected ? 'border-blue-500' : 'border-gray-300'}
+                                            `}>
+                                                {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />}
                                             </div>
                                         </div>
                                     );
@@ -574,149 +494,126 @@ function QuizPage({ quizId, subjectId, onBack }) {
                             </div>
                         </div>
 
-                        <div className="card-footer d-flex justify-content-between align-items-center bg-light py-3">
+                        {/* Footer Navigation */}
+                        <div className="bg-gray-50 p-4 border-t border-gray-100 flex justify-between items-center">
                             <button
-                                className="btn btn-secondary btn-lg"
                                 onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
                                 disabled={currentQuestionIndex === 0}
+                                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold transition-colors ${
+                                    currentQuestionIndex === 0 
+                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                                    : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300 shadow-sm'
+                                }`}
                             >
-                                ← Oldingi
+                                <ArrowLeft className="w-5 h-5" />
+                                Oldingi
                             </button>
 
-                            <div className="text-center">
-                                <small className="text-muted">
-                                    {Object.keys(answers).length} / {questions.length} savolga javob berildi
-                                </small>
+                            <div className="hidden sm:block text-gray-500 text-sm font-medium">
+                                {Object.keys(answers).length} / {questions.length} javob berildi
                             </div>
 
                             {currentQuestionIndex === questions.length - 1 ? (
                                 <button
-                                    className="btn btn-success btn-lg"
                                     onClick={handleSubmit}
                                     disabled={isSubmitting}
+                                    className="flex items-center gap-2 px-6 py-2.5 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 shadow-lg shadow-green-200 transition-colors disabled:opacity-70"
                                 >
-                                    {isSubmitting ? (
-                                        <>
-                                            <span className="spinner-border spinner-border-sm me-2"></span>
-                                            Yuklanmoqda...
-                                        </>
-                                    ) : (
-                                        <>✉️ Yakunlash</>
-                                    )}
+                                    {isSubmitting ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                                    Yakunlash
                                 </button>
                             ) : (
                                 <button
-                                    className="btn btn-primary btn-lg"
                                     onClick={() => setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))}
+                                    className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-colors"
                                 >
-                                    Keyingi →
+                                    Keyingi
+                                    <ArrowRight className="w-5 h-5" />
                                 </button>
                             )}
                         </div>
                     </div>
                 </div>
 
-                <div className="col-lg-3">
-                    <div className="card sticky-top shadow-sm border-0" style={{ top: '20px' }}>
-                        <div className="card-header bg-info text-white">
-                            <h6 className="mb-0 text-white fw-bold">
-                                📊 Test Navigatsiyasi
-                            </h6>
+                {/* Right/Bottom: Sidebar Info */}
+                <div className="lg:col-span-1">
+                    <div className="sticky top-6 space-y-4">
+                        {/* Timer Card */}
+                        <div className={`bg-white rounded-2xl shadow-sm border-l-4 p-5 ${timeLeft < 300 ? 'border-red-500' : 'border-blue-500'}`}>
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-gray-500 font-medium text-sm flex items-center gap-2">
+                                    <Timer className="w-4 h-4" /> Qolgan vaqt
+                                </span>
+                                {timeLeft < 300 && <span className="flex h-3 w-3 relative">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                                </span>}
+                            </div>
+                            <div className={`text-3xl font-bold font-mono tracking-wider ${timeLeft < 300 ? 'text-red-600' : 'text-gray-800'}`}>
+                                {formatTime(timeLeft)}
+                            </div>
                         </div>
-                        <div className="card-body">
-                            <div className={`alert ${timeLeft < 300 ? 'alert-danger' : 'alert-warning'} text-center mb-3 border-0`}>
-                                ⏱️ <strong>Qolgan vaqt:</strong>
-                                <h4 className="mb-0 mt-2 fw-bold" style={{ color: timeLeft < 300 ? '#dc3545' : 'inherit' }}>
-                                    {formatTime(timeLeft)}
-                                </h4>
-                            </div>
 
-                            <div className="mb-3">
-                                <div className="d-flex justify-content-between mb-2">
-                                    <small className="text-muted">Jarayon</small>
-                                    <small className="text-muted fw-bold">
-                                        {Math.round((Object.keys(answers).length / questions.length) * 100)}%
-                                    </small>
-                                </div>
-                                <div className="progress" style={{ height: '8px' }}>
-                                    <div
-                                        className="progress-bar bg-success"
-                                        style={{ width: `${(Object.keys(answers).length / questions.length) * 100}%` }}
-                                    ></div>
-                                </div>
-                            </div>
-
-                            <hr />
-
-                            <div className="row g-2 mb-3">
+                        {/* Progress Card */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                            <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                <LayoutGrid className="w-5 h-5 text-gray-400" />
+                                Savollar xaritasi
+                            </h4>
+                            
+                            <div className="grid grid-cols-5 gap-2">
                                 {questions.map((_, index) => {
                                     const status = getQuestionStatus(index);
-                                    let bgClass;
-
-                                    switch (status) {
-                                        case 'answered-marked':
-                                            bgClass = 'bg-warning';
-                                            break;
-                                        case 'answered':
-                                            bgClass = 'bg-success';
-                                            break;
-                                        case 'marked':
-                                            bgClass = 'bg-info';
-                                            break;
-                                        default:
-                                            bgClass = 'bg-secondary';
+                                    let btnClass = "bg-gray-100 text-gray-500 hover:bg-gray-200"; // Default
+                                    
+                                    if (status === 'answered') btnClass = "bg-blue-500 text-white shadow-sm shadow-blue-200";
+                                    else if (status === 'marked') btnClass = "bg-yellow-400 text-yellow-900 border border-yellow-500";
+                                    else if (status === 'answered-marked') btnClass = "bg-gradient-to-br from-blue-500 to-yellow-400 text-white";
+                                    
+                                    if (currentQuestionIndex === index) {
+                                        btnClass += " ring-2 ring-offset-2 ring-blue-500";
                                     }
 
                                     return (
-                                        <div className="col-3" key={index}>
-                                            <button
-                                                className={`btn ${bgClass} text-white w-100 ${currentQuestionIndex === index ? 'border border-dark border-3 shadow' : ''}`}
-                                                onClick={() => setCurrentQuestionIndex(index)}
-                                                style={{ fontSize: '14px', padding: '8px' }}
-                                            >
-                                                {index + 1}
-                                            </button>
-                                        </div>
+                                        <button
+                                            key={index}
+                                            onClick={() => setCurrentQuestionIndex(index)}
+                                            className={`h-10 w-full rounded-lg font-bold text-sm transition-all ${btnClass}`}
+                                        >
+                                            {index + 1}
+                                        </button>
                                     );
                                 })}
                             </div>
 
-                            <div className="small mb-3">
-                                <div className="d-flex align-items-center mb-2">
-                                    <span className="badge bg-success me-2" style={{ width: '20px', height: '20px' }}></span>
-                                    <span>Javob berilgan ({Object.keys(answers).length})</span>
+                            <div className="mt-6 space-y-2 text-xs text-gray-500 border-t pt-4 border-gray-100">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 rounded bg-gray-100 border border-gray-200"></div>
+                                    Javob berilmagan
                                 </div>
-                                <div className="d-flex align-items-center mb-2">
-                                    <span className="badge bg-info me-2" style={{ width: '20px', height: '20px' }}></span>
-                                    <span>Ko'rib chiqish uchun ({Object.keys(markedForReview).filter(k => markedForReview[k]).length})</span>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 rounded bg-blue-500"></div>
+                                    Javob berilgan
                                 </div>
-                                <div className="d-flex align-items-center">
-                                    <span className="badge bg-secondary me-2" style={{ width: '20px', height: '20px' }}></span>
-                                    <span>Javob berilmagan ({questions.length - Object.keys(answers).length})</span>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 rounded bg-yellow-400"></div>
+                                    Belgilangan
                                 </div>
                             </div>
-
-                            <hr />
-
-                            <button
-                                className="btn btn-danger w-100 btn-lg"
-                                onClick={handleSubmit}
-                                disabled={isSubmitting}
-                            >
-                                {isSubmitting ? (
-                                    <>
-                                        <span className="spinner-border spinner-border-sm me-2"></span>
-                                        Yuklanmoqda...
-                                    </>
-                                ) : (
-                                    <>🏁 Testni Tugatish</>
-                                )}
-                            </button>
                         </div>
+                        
+                        <button
+                            onClick={handleSubmit}
+                            disabled={isSubmitting}
+                            className="w-full py-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 shadow-lg shadow-red-200 transition-all flex items-center justify-center gap-2"
+                        >
+                            <Flag className="w-5 h-5" />
+                            Testni tugatish
+                        </button>
                     </div>
                 </div>
             </div>
-        </>
+        </div>
     );
 }
 

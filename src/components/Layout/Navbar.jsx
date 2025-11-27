@@ -1,88 +1,113 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Search, Menu, User, LogOut, Settings, ChevronDown } from 'lucide-react';
 
 function Navbar({ user, onLogout, onToggleMobileMenu }) {
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const dropdownRef = useRef(null);
+
+    // Dropdown tashqarisiga bosilganda yopish
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsDropdownOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [dropdownRef]);
+
     return (
-        <nav className="layout-navbar container-xxl navbar-detached navbar navbar-expand-xl align-items-center bg-navbar-theme" id="layout-navbar">
-            {/* Mobile menu toggle */}
-            <div className="layout-menu-toggle navbar-nav align-items-xl-center me-4 me-xl-0 d-xl-none">
-                <a 
-                    className="nav-item nav-link px-0 me-xl-6" 
-                    href="#"
+        <nav className="bg-white/80 backdrop-blur-md border-b border-gray-100 h-16 px-4 lg:px-6 flex items-center justify-between sticky top-0 z-30 transition-all">
+            {/* Left Side: Mobile Toggle & Search */}
+            <div className="flex items-center gap-4 flex-1">
+                {/* Mobile Menu Toggle */}
+                <button
                     onClick={(e) => {
                         e.preventDefault();
-                        onToggleMobileMenu(); // ← YANGI
+                        onToggleMobileMenu();
                     }}
+                    className="xl:hidden p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                    <i className="icon-base ri ri-menu-line icon-22px"></i>
-                </a>
+                    <Menu className="w-6 h-6" />
+                </button>
+
+                {/* Search Bar (Desktop) */}
+                <div className="relative hidden md:block w-full max-w-md">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <Search className="w-4 h-4 text-gray-400" />
+                    </div>
+                    <input
+                        type="text"
+                        className="w-full py-2 pl-10 pr-4 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none transition-all placeholder-gray-400"
+                        placeholder="Qidirish..."
+                    />
+                </div>
             </div>
 
-            <div className="navbar-nav-right d-flex align-items-center justify-content-end" id="navbar-collapse">
-                {/* Search */}
-                <div className="navbar-nav align-items-center">
-                    <div className="nav-item navbar-search-wrapper mb-0">
-                        <a className="nav-item nav-link search-toggler px-0" href="#">
-                            <span className="d-inline-block text-body-secondary fw-normal">Qidirish...</span>
-                        </a>
-                    </div>
-                </div>
+            {/* Right Side: User Profile */}
+            <div className="flex items-center gap-4">
+                {/* Search Button (Mobile only) */}
+                <button className="md:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg">
+                    <Search className="w-5 h-5" />
+                </button>
 
-                <ul className="navbar-nav flex-row align-items-center ms-md-auto">
-                    {/* User Dropdown */}
-                    <li className="nav-item navbar-dropdown dropdown-user dropdown">
-                        <a className="nav-link dropdown-toggle hide-arrow" href="#" data-bs-toggle="dropdown">
-                            <div className="avatar avatar-online">
-                                <span className="avatar-initial rounded-circle bg-label-primary">
-                                    {user?.name?.charAt(0).toUpperCase() || 'U'}
-                                </span>
+                <div className="relative" ref={dropdownRef}>
+                    <button
+                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                        className="flex items-center gap-3 p-1 pr-3 rounded-full hover:bg-gray-50 transition-all border border-transparent hover:border-gray-100 outline-none"
+                    >
+                        <div className="w-8 h-8 lg:w-9 lg:h-9 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white font-bold text-sm shadow-sm ring-2 ring-white">
+                            {user?.name?.charAt(0).toUpperCase() || 'U'}
+                        </div>
+
+                        <div className="hidden lg:block text-left">
+                            <p className="text-sm font-semibold text-gray-700 leading-none mb-0.5">
+                                {user?.name || 'Foydalanuvchi'}
+                            </p>
+                            <p className="text-[11px] text-gray-500 leading-none font-medium uppercase tracking-wide">
+                                {user?.role || 'O\'quvchi'}
+                            </p>
+                        </div>
+
+                        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 hidden lg:block ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {/* Dropdown Menu */}
+                    {isDropdownOpen && (
+                        <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-2 animate-in fade-in slide-in-from-top-2 origin-top-right">
+                            {/* Mobile User Info inside Dropdown */}
+                            <div className="px-4 py-3 border-b border-gray-50 lg:hidden bg-gray-50/50 mx-2 rounded-lg mb-1">
+                                <p className="text-sm font-semibold text-gray-900">{user?.name || 'User'}</p>
+                                <p className="text-xs text-gray-500">{user?.role || 'Student'}</p>
                             </div>
-                        </a>
-                        <ul className="dropdown-menu dropdown-menu-end mt-3 py-2">
-                            <li>
-                                <a className="dropdown-item" href="#">
-                                    <div className="d-flex align-items-center">
-                                        <div className="flex-shrink-0 me-2">
-                                            <div className="avatar avatar-online">
-                                                <span className="avatar-initial rounded-circle bg-label-primary">
-                                                    {user?.name?.charAt(0).toUpperCase() || 'U'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="flex-grow-1">
-                                            <h6 className="mb-0 small">{user?.name || 'User'}</h6>
-                                            <small className="text-body-secondary">{user?.role || 'Student'}</small>
-                                        </div>
-                                    </div>
+
+                            <div className="py-1 px-1">
+                                <a href="#" className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 rounded-lg transition-colors mx-1">
+                                    <User className="w-4 h-4" />
+                                    Profil
                                 </a>
-                            </li>
-                            <li><div className="dropdown-divider"></div></li>
-                            <li>
-                                <a className="dropdown-item" href="#">
-                                    <i className="icon-base ri ri-user-3-line icon-22px me-3"></i>
-                                    <span className="align-middle">Profil</span>
+                                <a href="#" className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700 rounded-lg transition-colors mx-1">
+                                    <Settings className="w-4 h-4" />
+                                    Sozlamalar
                                 </a>
-                            </li>
-                            <li>
-                                <a className="dropdown-item" href="#">
-                                    <i className="icon-base ri ri-settings-4-line icon-22px me-3"></i>
-                                    <span className="align-middle">Sozlamalar</span>
-                                </a>
-                            </li>
-                            <li><div className="dropdown-divider"></div></li>
-                            <li>
-                                <div className="d-grid px-4 pt-2 pb-1">
-                                    <button
-                                        className="btn btn-sm btn-danger d-flex"
-                                        onClick={onLogout}
-                                    >
-                                        <small className="align-middle">Chiqish</small>
-                                        <i className="icon-base ri ri-logout-box-r-line ms-2 icon-16px"></i>
-                                    </button>
-                                </div>
-                            </li>
-                        </ul>
-                    </li>
-                </ul>
+                            </div>
+
+                            <div className="border-t border-gray-100 my-1"></div>
+
+                            <div className="px-1">
+                                <button
+                                    onClick={onLogout}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors text-left mx-1"
+                                >
+                                    <LogOut className="w-4 h-4" />
+                                    Chiqish
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </nav>
     );

@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react';
 import { BookOpen, Calendar, Clock, Target, CheckCircle, XCircle, AlertCircle, Lock, Play, RefreshCw, TrendingUp } from 'lucide-react';
+import { API_BASE_URL } from '../../config';
+
+// ==========================================
+// ⚙️ SOZLAMALAR (CONFIG)
+// ==========================================
 
 function Dashboard({ user = { first_name: 'Jasur', last_name: 'Aliyev' } }) {
     const [quizzes, setQuizzes] = useState([]);
@@ -17,7 +22,8 @@ function Dashboard({ user = { first_name: 'Jasur', last_name: 'Aliyev' } }) {
             setError(null);
             const token = localStorage.getItem('token');
 
-            const response = await fetch('https://quizvds-production.up.railway.app/api/quiz', {
+            // API_BASE_URL dan foydalanish
+            const response = await fetch(`${API_BASE_URL}/api/quiz`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'application/json'
@@ -232,8 +238,8 @@ function Dashboard({ user = { first_name: 'Jasur', last_name: 'Aliyev' } }) {
                                                         </td>
                                                         <td className="px-4 py-4">
                                                             <span className={`px-3 py-1 rounded-lg font-bold text-sm ${quiz.attempts.used >= quiz.attempts.total
-                                                                    ? 'bg-red-100 text-red-700'
-                                                                    : 'bg-orange-100 text-orange-700'
+                                                                ? 'bg-red-100 text-red-700'
+                                                                : 'bg-orange-100 text-orange-700'
                                                                 }`}>
                                                                 {quiz.attempts.used}/{quiz.attempts.total}
                                                             </span>
@@ -256,8 +262,8 @@ function Dashboard({ user = { first_name: 'Jasur', last_name: 'Aliyev' } }) {
                                                                     }
                                                                 }}
                                                                 className={`px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 transition-colors ${status.canStart
-                                                                        ? 'bg-green-500 text-white hover:bg-green-600'
-                                                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                                    ? 'bg-green-500 text-white hover:bg-green-600'
+                                                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                                                     }`}
                                                             >
                                                                 {status.canStart ? <Play className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
@@ -324,8 +330,8 @@ function Dashboard({ user = { first_name: 'Jasur', last_name: 'Aliyev' } }) {
                                                             Urinishlar:
                                                         </span>
                                                         <span className={`px-3 py-1 rounded-lg font-bold text-sm ${quiz.attempts.used >= quiz.attempts.total
-                                                                ? 'bg-red-100 text-red-700'
-                                                                : 'bg-orange-100 text-orange-700'
+                                                            ? 'bg-red-100 text-red-700'
+                                                            : 'bg-orange-100 text-orange-700'
                                                             }`}>
                                                             {quiz.attempts.used}/{quiz.attempts.total}
                                                         </span>
@@ -351,8 +357,8 @@ function Dashboard({ user = { first_name: 'Jasur', last_name: 'Aliyev' } }) {
                                                         }
                                                     }}
                                                     className={`w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors ${status.canStart
-                                                            ? 'bg-green-500 text-white hover:bg-green-600'
-                                                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                        ? 'bg-green-500 text-white hover:bg-green-600'
+                                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                                         }`}
                                                 >
                                                     {status.canStart ? <Play className="w-5 h-5" /> : <Lock className="w-5 h-5" />}

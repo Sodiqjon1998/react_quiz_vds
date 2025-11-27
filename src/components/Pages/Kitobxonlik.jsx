@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-// "File" ikonkasini "FileIcon" deb nomlaymiz, shunda u brauzerning File klassi bilan adashmaydi
 import { BookOpen, Calendar, Clock, Upload, Mic, Play, Square, RefreshCw, File as FileIcon, TrendingUp, CheckCircle, XCircle, AlertCircle, HardDrive } from 'lucide-react';
+// API manzilini umumiy config faylidan import qilamiz
+// Eslatma: Agar fayl joylashuvi o'zgarsa, ../../config yo'lini to'g'irlash kerak bo'lishi mumkin
+import { API_BASE_URL } from '../../config';
 
 function Kitobxonlik() {
     const [recordings, setRecordings] = useState([]);
@@ -16,6 +18,8 @@ function Kitobxonlik() {
     const [mediaRecorder, setMediaRecorder] = useState(null);
     const [showMicTab, setShowMicTab] = useState(false);
     const [bookName, setBookName] = useState('');
+
+    // API_BASE_URL endi config.js dan olinmoqda, bu yerda mahalliy o'zgaruvchi shart emas.
 
     useEffect(() => {
         fetchReadings();
@@ -33,18 +37,32 @@ function Kitobxonlik() {
         };
     }, [isRecording]);
 
+    // --- YANGI: URLni tozalovchi funksiya (MUHIM QISM) ---
+    const getCleanAudioUrl = (url) => {
+        if (!url) return '';
+        
+        // Agar URLda "http" so'zi birdan ortiq qatnashgan bo'lsa (ya'ni dublikat bo'lsa)
+        // Biz oxirgi "http" dan boshlab qirqib olamiz.
+        const lastHttpIndex = url.lastIndexOf('http');
+        
+        if (lastHttpIndex > 0) {
+            return url.substring(lastHttpIndex);
+        }
+        
+        return url;
+    };
+
     const fetchReadings = async () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
-            
             if (!token) {
                 setLoading(false);
                 return;
             }
 
             const response = await fetch(
-                `https://quizvds-production.up.railway.app/api/readings?month=${selectedMonth + 1}&year=${selectedYear}`,
+                `${API_BASE_URL}/api/readings?month=${selectedMonth + 1}&year=${selectedYear}`,
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -84,15 +102,25 @@ function Kitobxonlik() {
 
     const handleUpload = async () => {
         if (!selectedFile) return;
+        if (!bookName.trim()) {
+            alert('Iltimos, kitob nomini kiriting!');
+            return;
+        }
         
         setUploading(true);
 
         try {
             const token = localStorage.getItem('token');
             const formData = new FormData();
-            formData.append('audio', selectedFile);
+            
+            const safeBookName = bookName.trim().replace(/[^a-zA-Z0-9а-яА-ЯёЁўҚқҒғҲҳ\s]/g, '').replace(/\s+/g, '_');
+            const newFileName = `${safeBookName}_${Date.now()}.${selectedFile.name.split('.').pop()}`;
+            const renamedFile = new File([selectedFile], newFileName, { type: selectedFile.type });
+            
+            formData.append('audio', renamedFile);
+            formData.append('book_name', bookName);
 
-            const response = await fetch('https://quizvds-production.up.railway.app/api/readings/upload', {
+            const response = await fetch(`${API_BASE_URL}/api/readings/upload`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -106,6 +134,7 @@ function Kitobxonlik() {
             if (data.success) {
                 alert('✅ Audio muvaffaqiyatli yuklandi!');
                 setSelectedFile(null);
+                setBookName(''); 
                 fetchReadings();
             } else {
                 alert('❌ Xatolik: ' + data.message);
@@ -129,7 +158,7 @@ function Kitobxonlik() {
             
             const options = {
                 mimeType: 'audio/webm;codecs=opus',
-                audioBitsPerSecond: 32000
+                audioBitsPerSecond: 128000
             };
             
             if (!MediaRecorder.isTypeSupported(options.mimeType)) {
@@ -149,11 +178,11 @@ function Kitobxonlik() {
                 stream.getTracks().forEach(track => track.stop());
             };
 
-            recorder.start();
+            recorder.start(1000);
             setMediaRecorder(recorder);
             setIsRecording(true);
         } catch (err) {
-            alert('❌ Mikrofonni yoqishda xatolik!');
+            alert('❌ Mikrofonni yoqishda xatolik! Ruxsatlarni tekshiring.');
         }
     };
 
@@ -176,16 +205,16 @@ function Kitobxonlik() {
             const safeBookName = bookName.trim().replace(/[^a-zA-Z0-9а-яА-ЯёЁўҚқҒғҲҳ\s]/g, '').replace(/\s+/g, '_');
             const fileName = `${safeBookName}_${Date.now()}.webm`;
             
-            // Bu yerda endi brauzerning o'z File klassi ishlaydi
             const file = new File(
                 [recordedBlob], 
                 fileName, 
-                { type: 'audio/webm' }
+                { type: recordedBlob.type }
             );
             
             formData.append('audio', file);
+            formData.append('book_name', bookName);
 
-            const response = await fetch('https://quizvds-production.up.railway.app/api/readings/upload', {
+            const response = await fetch(`${API_BASE_URL}/api/readings/upload`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -363,9 +392,20 @@ function Kitobxonlik() {
                         </button>
                     </div>
 
-                    {/* File Upload */}
+                    {/* File Upload Tab */}
                     {!showMicTab && (
                         <div>
+                            <label className="block mb-2 text-sm font-medium text-gray-700">
+                                Kitob nomi
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Masalan: O'tgan kunlar"
+                                value={bookName}
+                                onChange={(e) => setBookName(e.target.value)}
+                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-sm mb-4 focus:border-orange-500 focus:outline-none transition-colors"
+                            />
+
                             <label className="block mb-2 text-sm font-medium text-gray-700">
                                 Audio fayl tanlash
                             </label>
@@ -407,7 +447,7 @@ function Kitobxonlik() {
                         </div>
                     )}
 
-                    {/* Microphone */}
+                    {/* Microphone Tab */}
                     {showMicTab && (
                         <div className="text-center py-8">
                             {!isRecording && !recordedBlob && (
@@ -632,7 +672,8 @@ function Kitobxonlik() {
                                         <div className="w-full sm:w-1/3">
                                             <audio 
                                                 controls 
-                                                src={rec.audio_url} 
+                                                // --- TOZALOVCHI FUNKSIYA ISHLATILDI ---
+                                                src={getCleanAudioUrl(rec.audio_url)} 
                                                 className="w-full h-8" 
                                                 preload="none"
                                             />

@@ -1,83 +1,102 @@
 import React from 'react';
+import { 
+  Home, BookOpen, Mic, CheckSquare, 
+  FileText, User, LogOut, X, Menu 
+} from 'lucide-react';
 
 function Sidebar({ currentPage, onNavigate, onLogout, isMobileMenuOpen, onCloseMobileMenu }) {
   const menuItems = [
-    { id: 'dashboard', icon: 'ri-home-smile-line', label: 'Bosh sahifa' },
-    // { id: 'darslar', icon: 'ri-book-open-line', label: 'Darslar' },
-    // { id: 'topshiriqlar', icon: 'ri-file-list-3-line', label: 'Topshiriqlar' },
-    { id: 'kitobxonlik', icon: 'ri-mic-line', label: 'Kitobxonlik' },
-    { id: 'vazifalar', icon: 'ri-task-line', label: 'Kunlik vazifalar' },
-    { id: 'quiz', icon: 'ri-file-list-3-line', label: 'Quiz' },
-    // { id: 'natijalar', icon: 'ri-bar-chart-box-line', label: 'Natijalar' },
-    { id: 'profil', icon: 'ri-user-line', label: 'Profil' },
-    // { id: 'sozlamalar', icon: 'ri-settings-4-line', label: 'Sozlamalar' },
+    { id: 'dashboard', icon: Home, label: 'Bosh sahifa' },
+    // { id: 'darslar', icon: BookOpen, label: 'Darslar' },
+    // { id: 'topshiriqlar', icon: FileText, label: 'Topshiriqlar' },
+    { id: 'kitobxonlik', icon: Mic, label: 'Kitobxonlik' },
+    { id: 'vazifalar', icon: CheckSquare, label: 'Kunlik vazifalar' },
+    { id: 'quiz', icon: FileText, label: 'Quiz' },
+    // { id: 'natijalar', icon: BarChart2, label: 'Natijalar' },
+    { id: 'profil', icon: User, label: 'Profil' },
+    // { id: 'sozlamalar', icon: Settings, label: 'Sozlamalar' },
   ];
 
   return (
-    <aside 
-      id="layout-menu" 
-      className={`layout-menu menu-vertical menu bg-menu-theme ${isMobileMenuOpen ? 'show' : ''}`}
-    >
-      {/* Logo */}
-      <div className="app-brand demo">
-        <a href="/" className="app-brand-link">
-          <span className="app-brand-text demo menu-text fw-semibold ms-2">
-            AYM Platform
-          </span>
-        </a>
+    <>
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 xl:hidden transition-opacity"
+          onClick={onCloseMobileMenu}
+        />
+      )}
 
-        {/* Close button (faqat mobile da ko'rinadi) */}
-        <a 
-          href="#" 
-          className="layout-menu-toggle menu-link text-large ms-auto d-block d-xl-none"
-          onClick={(e) => {
-            e.preventDefault();
-            onCloseMobileMenu();
-          }}
-        >
-          <i className="icon-base ri ri-close-line icon-22px"></i>
-        </a>
-      </div>
-
-      <div className="menu-inner-shadow"></div>
-
-      {/* Menu Items */}
-      <ul className="menu-inner py-1">
-        {menuItems.map(item => (
-          <li 
-            key={item.id} 
-            className={`menu-item ${currentPage === item.id ? 'active' : ''}`}
-          >
-            <a 
-              href="#" 
-              className="menu-link"
-              onClick={(e) => {
-                e.preventDefault();
-                onNavigate(item.id);
-              }}
-            >
-              <i className={`menu-icon icon-base ri ${item.icon} icon-22px`}></i>
-              <div className="text-truncate">{item.label}</div>
-            </a>
-          </li>
-        ))}
-
-        {/* Logout */}
-        <li className="menu-item mt-5">
-          <a 
-            href="#" 
-            className="menu-link text-danger"
-            onClick={(e) => {
-              e.preventDefault();
-              onLogout();
-            }}
-          >
-            <i className="menu-icon icon-base ri ri-logout-box-r-line icon-22px"></i>
-            <div className="text-truncate">Chiqish</div>
+      <aside 
+        className={`
+          fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-200 shadow-sm transition-transform duration-300 ease-in-out xl:translate-x-0 xl:static xl:h-screen
+          ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}
+      >
+        {/* Logo */}
+        <div className="h-16 flex items-center justify-between px-6 border-b border-gray-100">
+          <a href="/" className="flex items-center gap-2 text-gray-900 hover:text-orange-600 transition-colors">
+            <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-sm">
+              A
+            </div>
+            <span className="font-bold text-lg tracking-tight">AYM Platform</span>
           </a>
-        </li>
-      </ul>
-    </aside>
+
+          {/* Close button (Mobile) */}
+          <button 
+            className="xl:hidden p-1 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+            onClick={onCloseMobileMenu}
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* Menu Items */}
+        <nav className="p-4 space-y-1 overflow-y-auto h-[calc(100vh-4rem)]">
+          {menuItems.map((item) => {
+            const isActive = currentPage === item.id;
+            const Icon = item.icon;
+            
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  onNavigate(item.id);
+                  if (window.innerWidth < 1280) {
+                    onCloseMobileMenu();
+                  }
+                }}
+                className={`
+                  w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200
+                  ${isActive 
+                    ? 'bg-orange-50 text-orange-600 shadow-sm' 
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}
+                `}
+              >
+                <Icon className={`w-5 h-5 ${isActive ? 'text-orange-500' : 'text-gray-400'}`} />
+                <span className="truncate">{item.label}</span>
+                
+                {isActive && (
+                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-500" />
+                )}
+              </button>
+            );
+          })}
+
+          {/* Divider */}
+          <div className="my-4 border-t border-gray-100" />
+
+          {/* Logout */}
+          <button
+            onClick={onLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 transition-all duration-200 group mt-auto"
+          >
+            <LogOut className="w-5 h-5 text-red-400 group-hover:text-red-600" />
+            <span className="truncate">Chiqish</span>
+          </button>
+        </nav>
+      </aside>
+    </>
   );
 }
 

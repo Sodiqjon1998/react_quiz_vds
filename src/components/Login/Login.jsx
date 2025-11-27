@@ -1,4 +1,10 @@
 import React, { useState } from 'react';
+import { User, Lock, Eye, EyeOff, LogIn, Loader2, AlertCircle } from 'lucide-react';
+import { API_BASE_URL } from '../../config';
+
+// ==========================================
+// ⚙️ SOZLAMALAR (CONFIG)
+// ==========================================
 
 function Login({ onLoginSuccess }) {
     const [formData, setFormData] = useState({
@@ -18,302 +24,172 @@ function Login({ onLoginSuccess }) {
         }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError('');
 
-        fetch('https://quizvds-production.up.railway.app/api/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({
-                username: formData.username,
-                password: formData.password
-            })
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.token && data.user) {
-                    // localStorage ga saqlash
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    
-                    // Sinf ma'lumotini tekshirish
-                    if (data.user.class) {
-                        console.log('User sinfi:', data.user.class.name);
-                    } else {
-                        console.warn('User sinfi topilmadi!');
-                    }
-                    
-                    // Parent componentga yuborish
-                    onLoginSuccess(data.token, data.user);
-                } else {
-                    setError(data.message || 'Login xatosi!');
-                }
-            })
-            .catch(err => {
-                console.error('Error:', err);
-                setError('Server bilan bog\'lanishda xatolik!');
-            })
-            .finally(() => {
-                setLoading(false);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: formData.username,
+                    password: formData.password
+                })
             });
+
+            const data = await response.json();
+
+            if (data.token && data.user) {
+                // localStorage ga saqlash
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('user', JSON.stringify(data.user));
+                
+                // Sinf ma'lumotini tekshirish (ixtiyoriy log)
+                if (data.user.class) {
+                    console.log('User sinfi:', data.user.class.name);
+                }
+
+                // Parent componentga yuborish
+                if (onLoginSuccess) {
+                    onLoginSuccess(data.token, data.user);
+                }
+            } else {
+                setError(data.message || 'Login yoki parol noto\'g\'ri!');
+            }
+        } catch (err) {
+            console.error('Login Error:', err);
+            setError('Server bilan bog\'lanishda xatolik yuz berdi.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
-        <div style={{
-            minHeight: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            padding: '20px'
-        }}>
-            <div style={{
-                maxWidth: '450px',
-                width: '100%',
-                background: 'white',
-                borderRadius: '20px',
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-                padding: '40px'
-            }}>
-                <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-                    <h2 style={{
-                        fontSize: '28px',
-                        fontWeight: '700',
-                        color: '#1f2937',
-                        marginBottom: '10px'
-                    }}>
-                        Andijon Yuksalish Maktabi
-                    </h2>
-                    <div style={{
-                        width: '60px',
-                        height: '4px',
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        margin: '0 auto',
-                        borderRadius: '2px'
-                    }}></div>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+            <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+                {/* Logo / Header */}
+                <div className="text-center mb-8">
+                    <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-4 transform rotate-3 transition-transform hover:rotate-0">
+                        <LogIn className="w-8 h-8 text-orange-500" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Xush kelibsiz! 👋</h2>
+                    <p className="text-gray-500 font-medium">Andijon Yuksalish Maktabi</p>
                 </div>
 
-                <div style={{ marginBottom: '25px' }}>
-                    <h3 style={{
-                        fontSize: '24px',
-                        fontWeight: '600',
-                        color: '#1f2937'
-                    }}>
-                        Welcome! 👋
-                    </h3>
-                    <p style={{
-                        color: '#6b7280',
-                        marginTop: '8px',
-                        fontSize: '15px'
-                    }}>
-                        Please sign-in to your account
-                    </p>
-                </div>
-
+                {/* Error Message */}
                 {error && (
-                    <div style={{
-                        background: '#fee2e2',
-                        borderLeft: '4px solid #ef4444',
-                        color: '#991b1b',
-                        padding: '15px',
-                        borderRadius: '8px',
-                        marginBottom: '20px'
-                    }}>
-                        <p style={{
-                            fontWeight: '500',
-                            margin: 0
-                        }}>
-                            ❌ {error}
-                        </p>
+                    <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl flex items-center gap-3 text-sm animate-in fade-in slide-in-from-top-2">
+                        <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                        {error}
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit}>
-                    <div style={{ marginBottom: '20px' }}>
-                        <label style={{
-                            display: 'block',
-                            fontSize: '14px',
-                            fontWeight: '500',
-                            color: '#374151',
-                            marginBottom: '8px'
-                        }}>
-                            Username
-                        </label>
-                        <input
-                            type="text"
-                            name="username"
-                            id="username"
-                            value={formData.username}
-                            onChange={handleChange}
-                            placeholder="Enter your username"
-                            required
-                            style={{
-                                width: '100%',
-                                padding: '12px 16px',
-                                border: '2px solid #e5e7eb',
-                                borderRadius: '10px',
-                                fontSize: '15px',
-                                outline: 'none',
-                                transition: 'all 0.2s ease',
-                                boxSizing: 'border-box'
-                            }}
-                            onFocus={(e) => e.target.style.borderColor = '#667eea'}
-                            onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
-                        />
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Username Input */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-bold text-gray-700 block ml-1">Login</label>
+                        <div className="relative group">
+                            <input
+                                type="text"
+                                name="username"
+                                value={formData.username}
+                                onChange={handleChange}
+                                className="w-full px-4 py-3.5 pl-11 rounded-xl border border-gray-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-100 outline-none transition-all bg-gray-50 focus:bg-white placeholder-gray-400 font-medium"
+                                placeholder="Loginingizni kiriting"
+                                required
+                            />
+                            <User className="w-5 h-5 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 group-focus-within:text-orange-500 transition-colors" />
+                        </div>
                     </div>
 
-                    <div style={{ marginBottom: '20px' }}>
-                        <label style={{
-                            display: 'block',
-                            fontSize: '14px',
-                            fontWeight: '500',
-                            color: '#374151',
-                            marginBottom: '8px'
-                        }}>
-                            Password
-                        </label>
-                        <div style={{ position: 'relative' }}>
+                    {/* Password Input */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-bold text-gray-700 block ml-1">Parol</label>
+                        <div className="relative group">
                             <input
                                 type={showPassword ? "text" : "password"}
                                 name="password"
-                                id="password"
                                 value={formData.password}
                                 onChange={handleChange}
-                                placeholder="Enter your password"
+                                className="w-full px-4 py-3.5 pl-11 pr-11 rounded-xl border border-gray-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-100 outline-none transition-all bg-gray-50 focus:bg-white placeholder-gray-400 font-medium"
+                                placeholder="Parolingizni kiriting"
                                 required
-                                style={{
-                                    width: '100%',
-                                    padding: '12px 45px 12px 16px',
-                                    border: '2px solid #e5e7eb',
-                                    borderRadius: '10px',
-                                    fontSize: '15px',
-                                    outline: 'none',
-                                    transition: 'all 0.2s ease',
-                                    boxSizing: 'border-box'
-                                }}
-                                onFocus={(e) => e.target.style.borderColor = '#667eea'}
-                                onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
                             />
+                            <Lock className="w-5 h-5 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 group-focus-within:text-orange-500 transition-colors" />
+                            
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                style={{
-                                    position: 'absolute',
-                                    right: '12px',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    background: 'none',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    fontSize: '20px',
-                                    padding: '4px',
-                                    color: '#6b7280'
-                                }}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
                             >
-                                {showPassword ? '👁️' : '👁️‍🗨️'}
+                                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                             </button>
                         </div>
                     </div>
 
-                    <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginBottom: '25px'
-                    }}>
-                        <label style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            cursor: 'pointer',
-                            fontSize: '14px'
-                        }}>
-                            <input
-                                type="checkbox"
-                                name="remember"
-                                checked={formData.remember}
-                                onChange={handleChange}
-                                style={{
-                                    width: '16px',
-                                    height: '16px',
-                                    marginRight: '8px',
-                                    cursor: 'pointer'
-                                }}
-                            />
-                            <span style={{ color: '#374151' }}>Remember Me</span>
+                    {/* Remember Me & Forgot Password */}
+                    <div className="flex items-center justify-between pt-2">
+                        <label className="flex items-center gap-2 cursor-pointer group select-none">
+                            <div className="relative flex items-center">
+                                <input
+                                    type="checkbox"
+                                    name="remember"
+                                    checked={formData.remember}
+                                    onChange={handleChange}
+                                    className="peer sr-only"
+                                />
+                                <div className="w-5 h-5 border-2 border-gray-300 rounded transition-colors peer-checked:bg-orange-500 peer-checked:border-orange-500 peer-focus:ring-2 peer-focus:ring-orange-200"></div>
+                                <svg 
+                                    className="absolute w-3 h-3 text-white hidden peer-checked:block left-1 top-1 pointer-events-none" 
+                                    fill="none" 
+                                    viewBox="0 0 24 24" 
+                                    stroke="currentColor" 
+                                    strokeWidth="3"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors font-medium">Eslab qolish</span>
                         </label>
-                        <button
-                            type="button"
-                            style={{
-                                fontSize: '14px',
-                                color: '#667eea',
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                fontWeight: '500'
-                            }}
-                        >
-                            Forgot Password?
+                        <button type="button" className="text-sm font-bold text-orange-500 hover:text-orange-600 hover:underline transition-colors">
+                            Parolni unutdingizmi?
                         </button>
                     </div>
 
+                    {/* Submit Button */}
                     <button
                         type="submit"
                         disabled={loading}
-                        style={{
-                            width: '100%',
-                            background: loading ? '#9ca3af' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                            color: 'white',
-                            padding: '14px',
-                            borderRadius: '10px',
-                            border: 'none',
-                            fontSize: '16px',
-                            fontWeight: '600',
-                            cursor: loading ? 'not-allowed' : 'pointer',
-                            transition: 'all 0.3s ease',
-                            boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)'
-                        }}
-                        onMouseEnter={(e) => {
-                            if (!loading) {
-                                e.target.style.transform = 'translateY(-2px)';
-                                e.target.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.5)';
-                            }
-                        }}
-                        onMouseLeave={(e) => {
-                            if (!loading) {
-                                e.target.style.transform = 'translateY(0)';
-                                e.target.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
-                            }
-                        }}
+                        className="w-full py-3.5 rounded-xl font-bold text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-lg shadow-orange-200 transform hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
                     >
-                        {loading ? 'Loading...' : 'Sign in'}
+                        {loading ? (
+                            <>
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                Kirilmoqda...
+                            </>
+                        ) : (
+                            <>
+                                Tizimga kirish
+                                <LogIn className="w-5 h-5" />
+                            </>
+                        )}
                     </button>
                 </form>
 
-                <p style={{
-                    textAlign: 'center',
-                    marginTop: '25px',
-                    fontSize: '14px',
-                    color: '#6b7280'
-                }}>
-                    New on our platform?{' '}
-                    <button
-                        type="button"
-                        style={{
-                            color: '#667eea',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            fontWeight: '500'
-                        }}
-                    >
-                        Create an account
-                    </button>
-                </p>
+                {/* Footer */}
+                <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+                    <p className="text-sm text-gray-500 font-medium">
+                        Akkauntingiz yo'qmi?{' '}
+                        <button type="button" className="font-bold text-orange-500 hover:text-orange-600 hover:underline transition-colors">
+                            Ro'yxatdan o'tish
+                        </button>
+                    </p>
+                </div>
             </div>
         </div>
     );
