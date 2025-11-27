@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+// "File" ikonkasini "FileIcon" deb nomlaymiz, shunda u brauzerning File klassi bilan adashmaydi
+import { BookOpen, Calendar, Clock, Upload, Mic, Play, Square, RefreshCw, File as FileIcon, TrendingUp, CheckCircle, XCircle, AlertCircle, HardDrive } from 'lucide-react';
 
 function Kitobxonlik() {
     const [recordings, setRecordings] = useState([]);
@@ -13,7 +15,7 @@ function Kitobxonlik() {
     const [recordingTime, setRecordingTime] = useState(0);
     const [mediaRecorder, setMediaRecorder] = useState(null);
     const [showMicTab, setShowMicTab] = useState(false);
-    const [bookName, setBookName] = useState(''); // Kitob nomi
+    const [bookName, setBookName] = useState('');
 
     useEffect(() => {
         fetchReadings();
@@ -26,7 +28,6 @@ function Kitobxonlik() {
                 setRecordingTime(prev => prev + 1);
             }, 1000);
         }
-        // Recording to'xtaganda timer to'xtatiladi, lekin vaqt saqlanadi
         return () => {
             if (interval) clearInterval(interval);
         };
@@ -43,7 +44,7 @@ function Kitobxonlik() {
             }
 
             const response = await fetch(
-                `http://localhost:8000/api/readings?month=${selectedMonth + 1}&year=${selectedYear}`,
+                `https://quizvds-production.up.railway.app/api/readings?month=${selectedMonth + 1}&year=${selectedYear}`,
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -91,7 +92,7 @@ function Kitobxonlik() {
             const formData = new FormData();
             formData.append('audio', selectedFile);
 
-            const response = await fetch('http://localhost:8000/api/readings/upload', {
+            const response = await fetch('https://quizvds-production.up.railway.app/api/readings/upload', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -118,7 +119,6 @@ function Kitobxonlik() {
     };
 
     const startRecording = async () => {
-        // Kitob nomini tekshirish
         if (!bookName.trim()) {
             alert('❌ Iltimos, avval kitob nomini kiriting!');
             return;
@@ -127,7 +127,6 @@ function Kitobxonlik() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             
-            // Audio siqish sozlamalari
             const options = {
                 mimeType: 'audio/webm;codecs=opus',
                 audioBitsPerSecond: 32000
@@ -162,7 +161,6 @@ function Kitobxonlik() {
         if (mediaRecorder && isRecording) {
             mediaRecorder.stop();
             setIsRecording(false);
-            // Recording time ni saqlab qolish
         }
     };
 
@@ -175,10 +173,10 @@ function Kitobxonlik() {
             const token = localStorage.getItem('token');
             const formData = new FormData();
             
-            // Kitob nomi bilan fayl yaratish
             const safeBookName = bookName.trim().replace(/[^a-zA-Z0-9а-яА-ЯёЁўҚқҒғҲҳ\s]/g, '').replace(/\s+/g, '_');
             const fileName = `${safeBookName}_${Date.now()}.webm`;
             
+            // Bu yerda endi brauzerning o'z File klassi ishlaydi
             const file = new File(
                 [recordedBlob], 
                 fileName, 
@@ -187,7 +185,7 @@ function Kitobxonlik() {
             
             formData.append('audio', file);
 
-            const response = await fetch('http://localhost:8000/api/readings/upload', {
+            const response = await fetch('https://quizvds-production.up.railway.app/api/readings/upload', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -202,7 +200,7 @@ function Kitobxonlik() {
                 alert('✅ Audio muvaffaqiyatli yuklandi!');
                 setRecordedBlob(null);
                 setRecordingTime(0);
-                setBookName(''); // Kitob nomini tozalash
+                setBookName('');
                 fetchReadings();
             } else {
                 alert('❌ Xatolik: ' + data.message);
@@ -234,7 +232,6 @@ function Kitobxonlik() {
         
         const days = [];
         for (let day = 1; day <= daysInMonth; day++) {
-            // Realda yuklangan kunlarni tekshirish
             const hasRecording = recordings.some(r => {
                 const recordDate = new Date(r.created_at);
                 return recordDate.getDate() === day &&
@@ -253,199 +250,123 @@ function Kitobxonlik() {
 
     if (loading) {
         return (
-            <div style={{ 
-                minHeight: '100vh', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                background: '#f8f9fa'
-            }}>
-                <div style={{ textAlign: 'center' }}>
-                    <div style={{
-                        width: '50px',
-                        height: '50px',
-                        border: '4px solid #e0e0e0',
-                        borderTop: '4px solid #1a73e8',
-                        borderRadius: '50%',
-                        margin: '0 auto 1rem',
-                        animation: 'spin 1s linear infinite'
-                    }}></div>
-                    <p style={{ color: '#5f6368' }}>Yuklanmoqda...</p>
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-5">
+                <div className="text-center">
+                    <RefreshCw className="w-16 h-16 text-orange-500 mx-auto animate-spin mb-4" />
+                    <p className="text-gray-600 font-medium">Yuklanmoqda...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div style={{ 
-            minHeight: '100vh', 
-            background: '#f8f9fa',
-            padding: '20px'
-        }}>
-            <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div className="min-h-screen bg-gray-50 p-4 lg:p-6">
+            <div className="max-w-7xl mx-auto">
                 {/* Header */}
-                <div style={{
-                    background: 'white',
-                    borderRadius: '8px',
-                    padding: '24px',
-                    marginBottom: '20px',
-                    boxShadow: '0 1px 3px rgba(60,64,67,0.3)'
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm border-t-4 border-orange-500">
+                    <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+                            <BookOpen className="w-8 h-8 text-orange-500" />
+                        </div>
                         <div>
-                            <h1 style={{ 
-                                fontSize: '28px', 
-                                fontWeight: '400', 
-                                color: '#202124',
-                                margin: '0 0 8px 0'
-                            }}>
-                                📚 Kitobxonlik
-                            </h1>
-                            <p style={{ color: '#5f6368', margin: 0, fontSize: '14px' }}>
-                                Har kuni kitob o'qib audio yuklang va taraqqiyotingizni kuzating
-                            </p>
+                            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Kitobxonlik</h1>
+                            <p className="text-gray-600 text-sm mt-1">Har kuni kitob o'qib audio yuklang va taraqqiyotingizni kuzating</p>
                         </div>
                     </div>
                 </div>
 
                 {/* Statistics */}
-                <div style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-                    gap: '16px',
-                    marginBottom: '20px'
-                }}>
-                    <div style={{
-                        background: 'white',
-                        borderRadius: '8px',
-                        padding: '20px',
-                        boxShadow: '0 1px 3px rgba(60,64,67,0.3)',
-                        borderLeft: '4px solid #34a853'
-                    }}>
-                        <div style={{ fontSize: '32px', fontWeight: '500', color: '#34a853', marginBottom: '8px' }}>
-                            {statistics?.completed_days || 0}
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                    <div className="bg-white rounded-xl p-5 shadow-sm border-t-4 border-green-500">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
+                                <CheckCircle className="w-6 h-6 text-green-500" />
+                            </div>
                         </div>
-                        <div style={{ fontSize: '14px', color: '#5f6368' }}>Yuklangan kunlar</div>
+                        <h2 className="text-3xl font-bold text-green-500 mb-1">{statistics?.completed_days || 0}</h2>
+                        <p className="text-gray-600 text-sm font-medium">Yuklangan kunlar</p>
                     </div>
 
-                    <div style={{
-                        background: 'white',
-                        borderRadius: '8px',
-                        padding: '20px',
-                        boxShadow: '0 1px 3px rgba(60,64,67,0.3)',
-                        borderLeft: '4px solid #ea4335'
-                    }}>
-                        <div style={{ fontSize: '32px', fontWeight: '500', color: '#ea4335', marginBottom: '8px' }}>
-                            {statistics?.missed_days || 0}
+                    <div className="bg-white rounded-xl p-5 shadow-sm border-t-4 border-red-500">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center">
+                                <XCircle className="w-6 h-6 text-red-500" />
+                            </div>
                         </div>
-                        <div style={{ fontSize: '14px', color: '#5f6368' }}>O'tkazilgan kunlar</div>
+                        <h2 className="text-3xl font-bold text-red-500 mb-1">{statistics?.missed_days || 0}</h2>
+                        <p className="text-gray-600 text-sm font-medium">O'tkazilgan kunlar</p>
                     </div>
 
-                    <div style={{
-                        background: 'white',
-                        borderRadius: '8px',
-                        padding: '20px',
-                        boxShadow: '0 1px 3px rgba(60,64,67,0.3)',
-                        borderLeft: '4px solid #1a73e8'
-                    }}>
-                        <div style={{ fontSize: '32px', fontWeight: '500', color: '#1a73e8', marginBottom: '8px' }}>
-                            {statistics?.total_duration || '00:00'}
+                    <div className="bg-white rounded-xl p-5 shadow-sm border-t-4 border-blue-500">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                                <Clock className="w-6 h-6 text-blue-500" />
+                            </div>
                         </div>
-                        <div style={{ fontSize: '14px', color: '#5f6368' }}>Jami vaqt</div>
+                        <h2 className="text-3xl font-bold text-blue-500 mb-1">{statistics?.total_duration || '00:00'}</h2>
+                        <p className="text-gray-600 text-sm font-medium">Jami vaqt</p>
                     </div>
 
-                    <div style={{
-                        background: 'white',
-                        borderRadius: '8px',
-                        padding: '20px',
-                        boxShadow: '0 1px 3px rgba(60,64,67,0.3)',
-                        borderLeft: '4px solid #fbbc04'
-                    }}>
-                        <div style={{ fontSize: '32px', fontWeight: '500', color: '#fbbc04', marginBottom: '8px' }}>
-                            {statistics?.completion_rate || 0}%
+                    <div className="bg-white rounded-xl p-5 shadow-sm border-t-4 border-yellow-500">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-12 h-12 rounded-lg bg-yellow-100 flex items-center justify-center">
+                                <TrendingUp className="w-6 h-6 text-yellow-500" />
+                            </div>
                         </div>
-                        <div style={{ fontSize: '14px', color: '#5f6368' }}>To'liqlik darajasi</div>
+                        <h2 className="text-3xl font-bold text-yellow-500 mb-1">{statistics?.completion_rate || 0}%</h2>
+                        <p className="text-gray-600 text-sm font-medium">To'liqlik darajasi</p>
                     </div>
 
-                    <div style={{
-                        background: 'white',
-                        borderRadius: '8px',
-                        padding: '20px',
-                        boxShadow: '0 1px 3px rgba(60,64,67,0.3)',
-                        borderLeft: '4px solid #9c27b0'
-                    }}>
-                        <div style={{ fontSize: '32px', fontWeight: '500', color: '#9c27b0', marginBottom: '8px' }}>
-                            {statistics?.total_storage_used || '0 MB'}
+                    <div className="bg-white rounded-xl p-5 shadow-sm border-t-4 border-purple-500">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center">
+                                <HardDrive className="w-6 h-6 text-purple-500" />
+                            </div>
                         </div>
-                        <div style={{ fontSize: '14px', color: '#5f6368' }}>Jami hajm</div>
+                        <h2 className="text-3xl font-bold text-purple-500 mb-1">{statistics?.total_storage_used || '0 MB'}</h2>
+                        <p className="text-gray-600 text-sm font-medium">Jami hajm</p>
                     </div>
                 </div>
 
                 {/* Upload Section */}
-                <div style={{
-                    background: 'white',
-                    borderRadius: '8px',
-                    padding: '24px',
-                    marginBottom: '20px',
-                    boxShadow: '0 1px 3px rgba(60,64,67,0.3)'
-                }}>
-                    <h2 style={{ 
-                        fontSize: '18px', 
-                        fontWeight: '500', 
-                        color: '#202124',
-                        marginBottom: '20px'
-                    }}>
+                <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm">
+                    <h2 className="text-xl font-bold text-gray-900 mb-5 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-orange-500 flex items-center justify-center">
+                            <Upload className="w-5 h-5 text-white" />
+                        </div>
                         Bugungi kitob o'qishni yuklash
                     </h2>
 
                     {/* Tabs */}
-                    <div style={{ 
-                        display: 'flex', 
-                        gap: '8px',
-                        borderBottom: '1px solid #dadce0',
-                        marginBottom: '24px'
-                    }}>
+                    <div className="flex gap-2 border-b border-gray-200 mb-6">
                         <button
                             onClick={() => setShowMicTab(false)}
-                            style={{
-                                padding: '12px 16px',
-                                background: 'none',
-                                border: 'none',
-                                borderBottom: !showMicTab ? '2px solid #1a73e8' : '2px solid transparent',
-                                color: !showMicTab ? '#1a73e8' : '#5f6368',
-                                cursor: 'pointer',
-                                fontWeight: '500',
-                                fontSize: '14px'
-                            }}
+                            className={`px-5 py-3 font-semibold text-sm transition-all flex items-center gap-2 ${
+                                !showMicTab 
+                                    ? 'border-b-2 border-orange-500 text-orange-500' 
+                                    : 'text-gray-600'
+                            }`}
                         >
-                            📁 Fayl yuklash
+                            <FileIcon className="w-4 h-4" />
+                            Fayl yuklash
                         </button>
                         <button
                             onClick={() => setShowMicTab(true)}
-                            style={{
-                                padding: '12px 16px',
-                                background: 'none',
-                                border: 'none',
-                                borderBottom: showMicTab ? '2px solid #1a73e8' : '2px solid transparent',
-                                color: showMicTab ? '#1a73e8' : '#5f6368',
-                                cursor: 'pointer',
-                                fontWeight: '500',
-                                fontSize: '14px'
-                            }}
+                            className={`px-5 py-3 font-semibold text-sm transition-all flex items-center gap-2 ${
+                                showMicTab 
+                                    ? 'border-b-2 border-orange-500 text-orange-500' 
+                                    : 'text-gray-600'
+                            }`}
                         >
-                            🎤 Mikrofon
+                            <Mic className="w-4 h-4" />
+                            Mikrofon
                         </button>
                     </div>
 
                     {/* File Upload */}
                     {!showMicTab && (
                         <div>
-                            <label style={{ 
-                                display: 'block', 
-                                marginBottom: '8px', 
-                                fontSize: '14px', 
-                                color: '#5f6368' 
-                            }}>
+                            <label className="block mb-2 text-sm font-medium text-gray-700">
                                 Audio fayl tanlash
                             </label>
                             <input
@@ -453,33 +374,18 @@ function Kitobxonlik() {
                                 accept="audio/*"
                                 onChange={handleFileSelect}
                                 disabled={uploading}
-                                style={{
-                                    width: '100%',
-                                    padding: '12px',
-                                    border: '1px solid #dadce0',
-                                    borderRadius: '4px',
-                                    fontSize: '14px',
-                                    marginBottom: '12px'
-                                }}
+                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-sm mb-3 focus:border-orange-500 focus:outline-none transition-colors"
                             />
-                            <p style={{ fontSize: '12px', color: '#5f6368', margin: '0 0 16px 0' }}>
+                            <p className="text-xs text-gray-500 mb-4">
                                 MP3, WAV, OGG formatlarida, maksimal 50MB
                             </p>
 
                             {selectedFile && (
-                                <div style={{
-                                    background: '#e8f0fe',
-                                    padding: '16px',
-                                    borderRadius: '8px',
-                                    marginBottom: '16px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '12px'
-                                }}>
-                                    <div style={{ fontSize: '32px' }}>🎵</div>
-                                    <div>
-                                        <div style={{ fontWeight: '500', color: '#202124' }}>{selectedFile.name}</div>
-                                        <div style={{ fontSize: '12px', color: '#5f6368' }}>
+                                <div className="bg-orange-50 border border-orange-200 p-4 rounded-lg mb-4 flex items-center gap-3">
+                                    <FileIcon className="w-8 h-8 text-orange-500 flex-shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                        <div className="font-semibold text-gray-900 truncate">{selectedFile.name}</div>
+                                        <div className="text-xs text-gray-600">
                                             Hajm: {formatFileSize(selectedFile.size)}
                                         </div>
                                     </div>
@@ -489,36 +395,25 @@ function Kitobxonlik() {
                             <button
                                 onClick={handleUpload}
                                 disabled={!selectedFile || uploading}
-                                style={{
-                                    background: selectedFile && !uploading ? '#1a73e8' : '#dadce0',
-                                    color: 'white',
-                                    border: 'none',
-                                    padding: '12px 24px',
-                                    borderRadius: '4px',
-                                    cursor: selectedFile && !uploading ? 'pointer' : 'not-allowed',
-                                    fontWeight: '500',
-                                    fontSize: '14px'
-                                }}
+                                className={`px-6 py-3 rounded-lg font-semibold text-sm flex items-center gap-2 transition-all ${
+                                    selectedFile && !uploading 
+                                        ? 'bg-orange-500 text-white hover:bg-orange-600' 
+                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                }`}
                             >
-                                {uploading ? 'Yuklanmoqda...' : '⬆️ Yuklash'}
+                                <Upload className="w-4 h-4" />
+                                {uploading ? 'Yuklanmoqda...' : 'Yuklash'}
                             </button>
                         </div>
                     )}
 
                     {/* Microphone */}
                     {showMicTab && (
-                        <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                        <div className="text-center py-8">
                             {!isRecording && !recordedBlob && (
                                 <>
-                                    {/* Kitob nomi input */}
-                                    <div style={{ marginBottom: '24px', maxWidth: '400px', margin: '0 auto 24px' }}>
-                                        <label style={{ 
-                                            display: 'block', 
-                                            marginBottom: '8px', 
-                                            fontSize: '14px', 
-                                            color: '#5f6368',
-                                            textAlign: 'left'
-                                        }}>
+                                    <div className="max-w-md mx-auto mb-6">
+                                        <label className="block mb-2 text-sm font-medium text-gray-700 text-left">
                                             Kitob nomi
                                         </label>
                                         <input
@@ -526,38 +421,17 @@ function Kitobxonlik() {
                                             placeholder="Masalan: Sariq devning minorasi"
                                             value={bookName}
                                             onChange={(e) => setBookName(e.target.value)}
-                                            style={{
-                                                width: '100%',
-                                                padding: '12px',
-                                                border: '2px solid #dadce0',
-                                                borderRadius: '8px',
-                                                fontSize: '14px',
-                                                outline: 'none',
-                                                transition: 'border 0.2s'
-                                            }}
-                                            onFocus={(e) => e.target.style.borderColor = '#1a73e8'}
-                                            onBlur={(e) => e.target.style.borderColor = '#dadce0'}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-sm focus:border-orange-500 focus:outline-none transition-colors"
                                         />
                                     </div>
 
                                     <button
                                         onClick={startRecording}
-                                        style={{
-                                            width: '100px',
-                                            height: '100px',
-                                            borderRadius: '50%',
-                                            background: '#ea4335',
-                                            border: 'none',
-                                            color: 'white',
-                                            fontSize: '40px',
-                                            cursor: 'pointer',
-                                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                                            marginBottom: '16px'
-                                        }}
+                                        className="w-24 h-24 rounded-full bg-red-500 hover:bg-red-600 transition-colors shadow-lg flex items-center justify-center mx-auto mb-4"
                                     >
-                                        🎤
+                                        <Mic className="w-10 h-10 text-white" />
                                     </button>
-                                    <p style={{ color: '#5f6368', fontSize: '14px' }}>
+                                    <p className="text-gray-600 text-sm">
                                         Mikrofonni bosing va kitob o'qishni boshlang
                                     </p>
                                 </>
@@ -565,65 +439,38 @@ function Kitobxonlik() {
 
                             {isRecording && (
                                 <>
-                                    <div style={{ marginBottom: '24px' }}>
-                                        <div style={{
-                                            width: '80px',
-                                            height: '80px',
-                                            background: '#ea4335',
-                                            borderRadius: '50%',
-                                            margin: '0 auto 16px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '32px',
-                                            color: 'white',
-                                            animation: 'pulse 1.5s infinite'
-                                        }}>
-                                            ⏹️
+                                    <div className="mb-6">
+                                        <div className="w-20 h-20 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                                            <Square className="w-8 h-8 text-white" />
                                         </div>
-                                        <div style={{ fontSize: '18px', color: '#ea4335', marginBottom: '8px' }}>
+                                        <div className="text-lg text-red-500 font-semibold mb-2">
                                             Yozilmoqda...
                                         </div>
-                                        <div style={{ fontSize: '32px', fontWeight: '500', color: '#1a73e8' }}>
+                                        <div className="text-3xl font-bold text-orange-500">
                                             {formatTime(recordingTime)}
                                         </div>
                                     </div>
                                     <button
                                         onClick={stopRecording}
-                                        style={{
-                                            background: '#ea4335',
-                                            color: 'white',
-                                            border: 'none',
-                                            padding: '12px 24px',
-                                            borderRadius: '4px',
-                                            cursor: 'pointer',
-                                            fontWeight: '500',
-                                            fontSize: '14px'
-                                        }}
+                                        className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold flex items-center gap-2 mx-auto transition-colors"
                                     >
-                                        ⏹️ To'xtatish
+                                        <Square className="w-4 h-4" />
+                                        To'xtatish
                                     </button>
                                 </>
                             )}
 
                             {recordedBlob && (
                                 <>
-                                    <div style={{
-                                        background: '#e8f5e9',
-                                        padding: '24px',
-                                        borderRadius: '8px',
-                                        marginBottom: '24px',
-                                        maxWidth: '500px',
-                                        margin: '0 auto 24px'
-                                    }}>
-                                        <div style={{ fontSize: '48px', marginBottom: '12px' }}>✅</div>
-                                        <div style={{ fontSize: '18px', fontWeight: '500', color: '#34a853', marginBottom: '8px' }}>
+                                    <div className="bg-green-50 border border-green-200 p-6 rounded-xl mb-6 max-w-lg mx-auto">
+                                        <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
+                                        <div className="text-lg font-semibold text-green-700 mb-2">
                                             Audio yozildi!
                                         </div>
-                                        <div style={{ fontSize: '16px', color: '#202124', marginBottom: '4px', fontWeight: '500' }}>
-                                            📚 {bookName}
+                                        <div className="text-base text-gray-900 font-medium mb-1">
+                                            {bookName}
                                         </div>
-                                        <div style={{ fontSize: '14px', color: '#5f6368' }}>
+                                        <div className="text-sm text-gray-600">
                                             Davomiyligi: {formatTime(recordingTime)}
                                         </div>
                                     </div>
@@ -631,45 +478,28 @@ function Kitobxonlik() {
                                     <audio
                                         controls
                                         src={URL.createObjectURL(recordedBlob)}
-                                        style={{ width: '100%', maxWidth: '500px', marginBottom: '24px' }}
+                                        className="w-full max-w-lg mx-auto mb-6"
                                     />
 
-                                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                                    <div className="flex gap-3 justify-center">
                                         <button
                                             onClick={() => {
                                                 setRecordedBlob(null);
                                                 setRecordingTime(0);
-                                                // Kitob nomini saqlab qolish
                                                 startRecording();
                                             }}
-                                            style={{
-                                                background: '#5f6368',
-                                                color: 'white',
-                                                border: 'none',
-                                                padding: '12px 24px',
-                                                borderRadius: '4px',
-                                                cursor: 'pointer',
-                                                fontWeight: '500',
-                                                fontSize: '14px'
-                                            }}
+                                            className="px-5 py-2.5 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold flex items-center gap-2 transition-colors"
                                         >
-                                            🔄 Qayta yozish
+                                            <RefreshCw className="w-4 h-4" />
+                                            Qayta yozish
                                         </button>
                                         <button
                                             onClick={handleUploadRecording}
                                             disabled={uploading}
-                                            style={{
-                                                background: '#1a73e8',
-                                                color: 'white',
-                                                border: 'none',
-                                                padding: '12px 24px',
-                                                borderRadius: '4px',
-                                                cursor: 'pointer',
-                                                fontWeight: '500',
-                                                fontSize: '14px'
-                                            }}
+                                            className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold flex items-center gap-2 transition-colors disabled:bg-gray-300"
                                         >
-                                            {uploading ? 'Yuklanmoqda...' : '⬆️ Yuklash'}
+                                            <Upload className="w-4 h-4" />
+                                            {uploading ? 'Yuklanmoqda...' : 'Yuklash'}
                                         </button>
                                     </div>
                                 </>
@@ -679,33 +509,19 @@ function Kitobxonlik() {
                 </div>
 
                 {/* Calendar */}
-                <div style={{
-                    background: 'white',
-                    borderRadius: '8px',
-                    padding: '24px',
-                    marginBottom: '20px',
-                    boxShadow: '0 1px 3px rgba(60,64,67,0.3)'
-                }}>
-                    <div style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        marginBottom: '20px'
-                    }}>
-                        <h2 style={{ fontSize: '18px', fontWeight: '500', color: '#202124', margin: 0 }}>
-                            📅 Oylik kalendar
+                <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm">
+                    <div className="flex justify-between items-center mb-5 flex-wrap gap-4">
+                        <h2 className="text-xl font-bold text-gray-900 flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-orange-500 flex items-center justify-center">
+                                <Calendar className="w-5 h-5 text-white" />
+                            </div>
+                            Oylik kalendar
                         </h2>
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                        <div className="flex gap-2">
                             <select
                                 value={selectedMonth}
                                 onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                                style={{
-                                    padding: '8px 12px',
-                                    border: '1px solid #dadce0',
-                                    borderRadius: '4px',
-                                    fontSize: '14px',
-                                    color: '#5f6368'
-                                }}
+                                className="px-4 py-2 border-2 border-gray-200 rounded-lg text-sm font-medium text-gray-700 focus:border-orange-500 focus:outline-none"
                             >
                                 {months.map((month, index) => (
                                     <option key={index} value={index}>{month}</option>
@@ -714,13 +530,7 @@ function Kitobxonlik() {
                             <select
                                 value={selectedYear}
                                 onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                                style={{
-                                    padding: '8px 12px',
-                                    border: '1px solid #dadce0',
-                                    borderRadius: '4px',
-                                    fontSize: '14px',
-                                    color: '#5f6368'
-                                }}
+                                className="px-4 py-2 border-2 border-gray-200 rounded-lg text-sm font-medium text-gray-700 focus:border-orange-500 focus:outline-none"
                             >
                                 {[2024, 2025, 2026].map(year => (
                                     <option key={year} value={year}>{year}</option>
@@ -729,185 +539,120 @@ function Kitobxonlik() {
                         </div>
                     </div>
 
-                    <div style={{ 
-                        display: 'flex', 
-                        justifyContent: 'center', 
-                        gap: '24px',
-                        marginBottom: '20px',
-                        fontSize: '12px'
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{ width: '16px', height: '16px', background: '#34a853', borderRadius: '4px' }}></div>
-                            <span style={{ color: '#5f6368' }}>Yuklangan</span>
+                    <div className="flex justify-center gap-6 mb-5 text-xs flex-wrap">
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 bg-green-500 rounded"></div>
+                            <span className="text-gray-600 font-medium">Yuklangan</span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{ width: '16px', height: '16px', background: '#ea4335', borderRadius: '4px' }}></div>
-                            <span style={{ color: '#5f6368' }}>O'tkazilgan</span>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 bg-red-500 rounded"></div>
+                            <span className="text-gray-600 font-medium">O'tkazilgan</span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{ width: '16px', height: '16px', background: '#e8eaed', borderRadius: '4px' }}></div>
-                            <span style={{ color: '#5f6368' }}>Kelgusi kunlar</span>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                            <span className="text-gray-600 font-medium">Kelgusi kunlar</span>
                         </div>
                     </div>
 
-                    <div style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(40px, 1fr))', 
-                        gap: '8px',
-                        maxWidth: '600px',
-                        margin: '0 auto'
-                    }}>
+                    <div className="grid grid-cols-7 gap-2 max-w-2xl mx-auto">
                         {getCalendarData().map(({ day, hasRecording, isPast, isFuture }) => {
-                            let bgColor = '#e8eaed';
+                            let bgColor = 'bg-gray-200';
+                            let textColor = 'text-gray-600';
+                            
                             if (isPast && !isFuture) {
-                                bgColor = hasRecording ? '#34a853' : '#ea4335';
+                                if (hasRecording) {
+                                    bgColor = 'bg-green-500';
+                                    textColor = 'text-white';
+                                } else {
+                                    bgColor = 'bg-red-500';
+                                    textColor = 'text-white';
+                                }
                             }
 
                             return (
                                 <div
                                     key={day}
-                                    style={{
-                                        width: '40px',
-                                        height: '40px',
-                                        background: bgColor,
-                                        color: isPast && !isFuture ? 'white' : '#5f6368',
-                                        borderRadius: '4px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontWeight: '500',
-                                        fontSize: '14px'
-                                    }}
+                                    className={`
+                                        aspect-square rounded-xl flex items-center justify-center text-sm font-bold transition-all duration-200 relative group cursor-default
+                                        ${bgColor} ${textColor}
+                                        ${isFuture ? 'opacity-40' : ''}
+                                    `}
                                 >
                                     {day}
+                                    
+                                    {/* Tooltip for hover effect */}
+                                    {hasRecording && (
+                                        <div className="absolute bottom-full mb-2 hidden group-hover:block z-10 w-max">
+                                            <div className="bg-gray-800 text-white text-xs rounded py-1 px-2">
+                                                Vazifa bajarilgan
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}
                     </div>
                 </div>
 
-                {/* Recordings Table */}
-                <div style={{
-                    background: 'white',
-                    borderRadius: '8px',
-                    padding: '24px',
-                    boxShadow: '0 1px 3px rgba(60,64,67,0.3)'
-                }}>
-                    <h2 style={{ 
-                        fontSize: '18px', 
-                        fontWeight: '500', 
-                        color: '#202124',
-                        marginBottom: '20px'
-                    }}>
-                        📋 Yuklangan audio yozuvlar
+                {/* Recordings History List */}
+                <div className="bg-white rounded-2xl p-6 shadow-sm">
+                    <h2 className="text-xl font-bold text-gray-900 mb-5 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center">
+                            <Play className="w-5 h-5 text-white" />
+                        </div>
+                        Yuklangan audiolaringiz
                     </h2>
-                    
-                    <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                            <thead>
-                                <tr style={{ borderBottom: '1px solid #dadce0' }}>
-                                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', color: '#5f6368', fontWeight: '500' }}>№</th>
-                                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', color: '#5f6368', fontWeight: '500' }}>Sana</th>
-                                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', color: '#5f6368', fontWeight: '500' }}>Fayl nomi</th>
-                                    <th style={{ padding: '12px', textAlign: 'center', fontSize: '14px', color: '#5f6368', fontWeight: '500' }}>Davomiyligi</th>
-                                    <th style={{ padding: '12px', textAlign: 'center', fontSize: '14px', color: '#5f6368', fontWeight: '500' }}>Hajmi</th>
-                                    <th style={{ padding: '12px', textAlign: 'center', fontSize: '14px', color: '#5f6368', fontWeight: '500' }}>Amal</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {recordings.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="6" style={{ padding: '60px 20px', textAlign: 'center' }}>
-                                            <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>📭</div>
-                                            <div style={{ fontSize: '14px', color: '#5f6368' }}>Hozircha audio yozuvlar yo'q</div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    recordings.map((record, index) => (
-                                        <tr key={record.id} style={{ borderBottom: '1px solid #f1f3f4' }}>
-                                            <td style={{ padding: '12px', fontSize: '14px', color: '#202124', fontWeight: '500' }}>{index + 1}</td>
-                                            <td style={{ padding: '12px', fontSize: '14px', color: '#5f6368' }}>
-                                                {new Date(record.created_at).toLocaleDateString('uz-UZ')}
-                                            </td>
-                                            <td style={{ padding: '12px', fontSize: '14px', color: '#202124' }}>
-                                                🎵 {record.filename}
-                                            </td>
-                                            <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                <span style={{
-                                                    background: '#e8f0fe',
-                                                    color: '#1a73e8',
-                                                    padding: '4px 12px',
-                                                    borderRadius: '12px',
-                                                    fontSize: '12px',
-                                                    fontWeight: '500'
-                                                }}>
-                                                    {formatTime(record.duration)}
-                                                </span>
-                                            </td>
-                                            <td style={{ padding: '12px', textAlign: 'center', fontSize: '14px', color: '#5f6368' }}>
-                                                {formatFileSize(record.file_size)}
-                                            </td>
-                                             <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                <a
-                                                    href={record.file_url.startsWith('http') 
-                                                        ? record.file_url 
-                                                        : `http://localhost:8000/storage/${record.file_url}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    style={{
-                                                        background: '#1a73e8',
-                                                        color: 'white',
-                                                        border: 'none',
-                                                        padding: '6px 12px',
-                                                        borderRadius: '4px',
-                                                        cursor: 'pointer',
-                                                        fontSize: '14px',
-                                                        textDecoration: 'none',
-                                                        display: 'inline-block'
-                                                    }}
-                                                >
-                                                    ▶️ Eshitish
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
+
+                    <div className="space-y-4">
+                        {recordings && recordings.length > 0 ? (
+                            recordings.map((rec) => (
+                                <div key={rec.id} className="border border-gray-100 rounded-xl p-4 hover:bg-orange-50 transition-colors group">
+                                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-500 font-bold shrink-0">
+                                                {new Date(rec.created_at).getDate()}
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-gray-900 text-sm sm:text-base">
+                                                    {rec.book_name || "Nomsiz kitob"}
+                                                </h4>
+                                                <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                                                    <span className="flex items-center gap-1">
+                                                        <Calendar className="w-3 h-3" />
+                                                        {new Date(rec.created_at).toLocaleDateString()}
+                                                    </span>
+                                                    <span className="flex items-center gap-1">
+                                                        <Clock className="w-3 h-3" />
+                                                        {new Date(rec.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="w-full sm:w-1/3">
+                                            <audio 
+                                                controls 
+                                                src={rec.audio_url} 
+                                                className="w-full h-8" 
+                                                preload="none"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="text-center py-10 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                                <div className="bg-gray-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <Mic className="w-6 h-6 text-gray-400" />
+                                </div>
+                                <p className="text-gray-500 font-medium">Bu oyda hali hech narsa yuklanmagan</p>
+                                <p className="text-gray-400 text-sm">Kitob o'qing va natijangizni qayd eting!</p>
+                            </div>
+                        )}
                     </div>
                 </div>
+
             </div>
-
-            <style>{`
-                @keyframes spin {
-                    0% { transform: rotate(0deg); }
-                    100% { transform: rotate(360deg); }
-                }
-
-                @keyframes pulse {
-                    0%, 100% { opacity: 1; transform: scale(1); }
-                    50% { opacity: 0.8; transform: scale(1.05); }
-                }
-
-                button:hover {
-                    opacity: 0.9;
-                    transition: opacity 0.2s;
-                }
-
-                button:active {
-                    transform: scale(0.98);
-                }
-
-                @media (max-width: 768px) {
-                    table {
-                        font-size: 12px;
-                    }
-                    
-                    th, td {
-                        padding: 8px !important;
-                    }
-                }
-            `}</style>
         </div>
     );
 }

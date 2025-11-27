@@ -23,7 +23,7 @@ function Login({ onLoginSuccess }) {
         setLoading(true);
         setError('');
 
-        fetch('http://localhost:8000/api/login', {
+        fetch('https://quizvds-production.up.railway.app/api/login', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

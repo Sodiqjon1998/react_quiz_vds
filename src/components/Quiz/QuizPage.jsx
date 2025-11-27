@@ -24,11 +24,11 @@ function QuizPage({ quizId, subjectId, onBack }) {
         
         // Agar storage/ bilan boshlansa
         if (imagePath.startsWith('storage/')) {
-            return `http://localhost:8000/${imagePath}`;
+            return `https://quizvds-production.up.railway.app/${imagePath}`;
         }
         
         // Boshqa holatlarda storage/ qo'shadi
-        return `http://localhost:8000/storage/${imagePath}`;
+        return `https://quizvds-production.up.railway.app/storage/${imagePath}`;
     };
 
     const saveState = useCallback(() => {
@@ -81,7 +81,7 @@ function QuizPage({ quizId, subjectId, onBack }) {
             setError(null);
 
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:8000/api/quiz/${quizId}/start`, {
+            const response = await fetch(`https://quizvds-production.up.railway.app/api/quiz/${quizId}/start`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'application/json'
@@ -178,7 +178,7 @@ function QuizPage({ quizId, subjectId, onBack }) {
 
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:8000/api/quiz/${quizId}/submit`, {
+            const response = await fetch(`https://quizvds-production.up.railway.app/api/quiz/${quizId}/submit`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,

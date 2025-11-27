@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { BookOpen, Calendar, Clock, Target, CheckCircle, XCircle, AlertCircle, Lock, Play, RefreshCw, TrendingUp } from 'lucide-react';
 
-function Dashboard({ user }) {
+function Dashboard({ user = { first_name: 'Jasur', last_name: 'Aliyev' } }) {
     const [quizzes, setQuizzes] = useState([]);
     const [statistics, setStatistics] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -16,7 +17,7 @@ function Dashboard({ user }) {
             setError(null);
             const token = localStorage.getItem('token');
 
-            const response = await fetch('http://localhost:8000/api/quiz', {
+            const response = await fetch('https://quizvds-production.up.railway.app/api/quiz', {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'application/json'
@@ -45,26 +46,26 @@ function Dashboard({ user }) {
 
     const getQuizStatus = (quiz) => {
         if (!quiz.attachment) {
-            return { text: 'Vaqt belgilanmagan', class: 'bg-secondary', icon: 'ri-time-line', canStart: false };
+            return { text: 'Vaqt belgilanmagan', bgColor: '#6C757D', icon: <Clock className="w-4 h-4" />, canStart: false };
         }
         if (quiz.is_expired) {
-            return { text: 'Muddati o\'tgan', class: 'bg-danger', icon: 'ri-close-circle-line', canStart: false };
+            return { text: 'Muddati o\'tgan', bgColor: '#DC3545', icon: <XCircle className="w-4 h-4" />, canStart: false };
         }
         if (quiz.is_upcoming) {
-            return { text: 'Yaqinda boshlanadi', class: 'bg-warning', icon: 'ri-calendar-line', canStart: false };
+            return { text: 'Yaqinda boshlanadi', bgColor: '#FFC107', icon: <AlertCircle className="w-4 h-4" />, canStart: false };
         }
         if (quiz.attempts.used >= quiz.attempts.total) {
-            return { text: 'Urinishlar tugadi', class: 'bg-info', icon: 'ri-forbid-line', canStart: false };
+            return { text: 'Urinishlar tugadi', bgColor: '#17A2B8', icon: <Lock className="w-4 h-4" />, canStart: false };
         }
-        return { text: 'Mavjud', class: 'bg-success', icon: 'ri-check-circle-line', canStart: true };
+        return { text: 'Mavjud', bgColor: '#28A745', icon: <CheckCircle className="w-4 h-4" />, canStart: true };
     };
 
     if (loading) {
         return (
-            <div style={{ minHeight: '100vh', background: '#f5f5f9', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
-                <div style={{ textAlign: 'center' }}>
-                    <div className="spinner-border text-primary" style={{ width: '3rem', height: '3rem' }}></div>
-                    <h5 style={{ marginTop: '20px', color: '#666' }}>Quizlar yuklanmoqda...</h5>
+            <div className="min-h-screen bg-gray-50 flex justify-center items-center p-5">
+                <div className="text-center">
+                    <RefreshCw className="w-16 h-16 text-orange-500 mx-auto animate-spin" />
+                    <h5 className="mt-5 text-gray-800 font-semibold text-lg">Quizlar yuklanmoqda...</h5>
                 </div>
             </div>
         );
@@ -72,26 +73,18 @@ function Dashboard({ user }) {
 
     if (error) {
         return (
-            <div style={{ padding: '20px', background: '#f5f5f9', minHeight: '100vh' }}>
-                <div style={{ maxWidth: '600px', margin: '0 auto', padding: '30px', background: 'white', borderRadius: '16px', border: '2px solid #dc3545' }}>
-                    <div style={{ textAlign: 'center' }}>
-                        <i className="ri-error-warning-line" style={{ fontSize: '60px', color: '#dc3545' }}></i>
-                        <h5 style={{ marginTop: '20px', color: '#dc3545' }}>Xatolik yuz berdi!</h5>
-                        <p style={{ color: '#666', marginTop: '10px' }}>{error}</p>
+            <div className="min-h-screen bg-gray-50 p-5 flex items-center justify-center">
+                <div className="max-w-lg w-full bg-white p-8 rounded-2xl border-2 border-red-500 shadow-lg">
+                    <div className="text-center">
+                        <AlertCircle className="w-16 h-16 text-red-500 mx-auto" />
+                        <h5 className="mt-5 text-red-500 font-bold text-xl">Xatolik yuz berdi!</h5>
+                        <p className="text-gray-600 mt-3">{error}</p>
                         <button
                             onClick={fetchQuizzes}
-                            style={{
-                                marginTop: '20px',
-                                padding: '12px 24px',
-                                borderRadius: '12px',
-                                border: 'none',
-                                background: '#dc3545',
-                                color: 'white',
-                                cursor: 'pointer',
-                                fontWeight: '600'
-                            }}
+                            className="mt-6 px-6 py-3 rounded-lg bg-orange-500 text-white font-semibold hover:bg-orange-600 transition-colors flex items-center gap-2 mx-auto"
                         >
-                            <i className="ri-refresh-line"></i> Qayta yuklash
+                            <RefreshCw className="w-5 h-5" />
+                            Qayta yuklash
                         </button>
                     </div>
                 </div>
@@ -100,438 +93,276 @@ function Dashboard({ user }) {
     }
 
     return (
-        <div style={{ padding: '20px', background: '#f5f5f9', minHeight: '100vh' }}>
-            <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div className="min-h-screen bg-gray-50 p-4 lg:p-6">
+            <div className="max-w-7xl mx-auto">
+                {/* Welcome Section */}
+                <div className="bg-white rounded-2xl p-6 shadow-sm mb-6 border-l-4 border-orange-500">
+                    <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+                            <BookOpen className="w-8 h-8 text-orange-500" />
+                        </div>
+                        <div className="flex-1">
+                            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
+                                Xush kelibsiz, <span className="text-orange-500">{user?.first_name} {user?.last_name}</span>!
+                            </h1>
+                            <p className="text-gray-600 mt-1">Yangi imkoniyatlarni kashf eting va muvaffaqiyatga erishing</p>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Statistics Cards */}
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                    gap: '20px',
-                    marginBottom: '30px'
-                }}>
-                    {/* Card 1 - Jami Quizlar */}
-                    <div style={{
-                        background: 'white',
-                        borderRadius: '16px',
-                        padding: '24px',
-                        borderLeft: '4px solid #667eea',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                        transition: 'all 0.3s ease',
-                        cursor: 'pointer'
-                    }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'translateY(-4px)';
-                            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
-                        }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                            <div style={{
-                                width: '48px',
-                                height: '48px',
-                                borderRadius: '12px',
-                                background: 'rgba(102, 126, 234, 0.1)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '24px',
-                                color: '#667eea'
-                            }}>
-                                📋
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-white rounded-xl p-5 shadow-sm border-l-4 border-orange-500">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-12 h-12 rounded-lg bg-orange-100 flex items-center justify-center">
+                                <BookOpen className="w-6 h-6 text-orange-500" />
                             </div>
-                            {/* <span style={{ color: '#28a745', fontSize: '14px', fontWeight: '600' }}>+22%</span> */}
                         </div>
-                        <h2 style={{ fontSize: '36px', fontWeight: '700', color: '#667eea', margin: '0 0 8px 0' }}>
-                            {statistics?.total || 0}
-                        </h2>
-                        <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>Jami Quizlar</p>
+                        <h2 className="text-3xl font-bold text-orange-500 mb-1">{statistics?.total || 0}</h2>
+                        <p className="text-gray-600 text-sm font-medium">Jami Quizlar</p>
                     </div>
 
-                    {/* Card 2 - Topshirilgan */}
-                    <div style={{
-                        background: 'white',
-                        borderRadius: '16px',
-                        padding: '24px',
-                        borderLeft: '4px solid #28a745',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                        transition: 'all 0.3s ease',
-                        cursor: 'pointer'
-                    }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'translateY(-4px)';
-                            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
-                        }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                            <div style={{
-                                width: '48px',
-                                height: '48px',
-                                borderRadius: '12px',
-                                background: 'rgba(40, 167, 69, 0.1)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '24px',
-                                color: '#28a745'
-                            }}>
-                                ✅
+                    <div className="bg-white rounded-xl p-5 shadow-sm border-l-4 border-green-500">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
+                                <CheckCircle className="w-6 h-6 text-green-500" />
                             </div>
-                            {/* <span style={{ color: '#28a745', fontSize: '14px', fontWeight: '600' }}>+38%</span> */}
                         </div>
-                        <h2 style={{ fontSize: '36px', fontWeight: '700', color: '#28a745', margin: '0 0 8px 0' }}>
-                            {statistics?.completed || 0}
-                        </h2>
-                        <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>Topshirilgan</p>
+                        <h2 className="text-3xl font-bold text-green-500 mb-1">{statistics?.completed || 0}</h2>
+                        <p className="text-gray-600 text-sm font-medium">Topshirilgan</p>
                     </div>
 
-                    {/* Card 3 - Kutilmoqda */}
-                    <div style={{
-                        background: 'white',
-                        borderRadius: '16px',
-                        padding: '24px',
-                        borderLeft: '4px solid #ffc107',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                        transition: 'all 0.3s ease',
-                        cursor: 'pointer'
-                    }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'translateY(-4px)';
-                            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
-                        }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                            <div style={{
-                                width: '48px',
-                                height: '48px',
-                                borderRadius: '12px',
-                                background: 'rgba(255, 193, 7, 0.1)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '24px',
-                                color: '#ffc107'
-                            }}>
-                                ⏳
+                    <div className="bg-white rounded-xl p-5 shadow-sm border-l-4 border-yellow-500">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-12 h-12 rounded-lg bg-yellow-100 flex items-center justify-center">
+                                <Clock className="w-6 h-6 text-yellow-500" />
                             </div>
-                            {/* <span style={{ color: '#ffc107', fontSize: '14px', fontWeight: '600' }}>-12%</span> */}
                         </div>
-                        <h2 style={{ fontSize: '36px', fontWeight: '700', color: '#ffc107', margin: '0 0 8px 0' }}>
+                        <h2 className="text-3xl font-bold text-yellow-500 mb-1">
                             {(statistics?.total || 0) - (statistics?.completed || 0)}
                         </h2>
-                        <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>Kutilmoqda</p>
+                        <p className="text-gray-600 text-sm font-medium">Kutilmoqda</p>
                     </div>
 
-                    {/* Card 4 - Foiz */}
-                    <div style={{
-                        background: 'white',
-                        borderRadius: '16px',
-                        padding: '24px',
-                        borderLeft: '4px solid #007bff',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                        transition: 'all 0.3s ease',
-                        cursor: 'pointer'
-                    }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'translateY(-4px)';
-                            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
-                        }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                            <div style={{
-                                width: '48px',
-                                height: '48px',
-                                borderRadius: '12px',
-                                background: 'rgba(0, 123, 255, 0.1)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '24px',
-                                color: '#007bff'
-                            }}>
-                                📊
+                    <div className="bg-white rounded-xl p-5 shadow-sm border-t-4 border-orange-500">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-12 h-12 rounded-lg bg-orange-100 flex items-center justify-center">
+                                <TrendingUp className="w-6 h-6 text-orange-500" />
                             </div>
-                            {/* <span style={{ color: '#28a745', fontSize: '14px', fontWeight: '600' }}>+5%</span> */}
                         </div>
-                        <h2 style={{ fontSize: '36px', fontWeight: '700', color: '#007bff', margin: '0 0 8px 0' }}>
+                        <h2 className="text-3xl font-bold text-orange-500 mb-1">
                             {statistics?.total ? Math.round((statistics.completed / statistics.total) * 100) : 0}%
                         </h2>
-                        <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>Muvaffaqiyat foizi</p>
+                        <p className="text-gray-600 text-sm font-medium">Muvaffaqiyat</p>
                     </div>
                 </div>
 
-                {/* Welcome Card */}
-                <div style={{
-                    background: 'white',
-                    borderRadius: '16px',
-                    padding: '32px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                    marginBottom: '30px',
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                    gap: '30px',
-                    alignItems: 'center'
-                }}>
-                    <div>
-                        <h1 style={{ fontSize: '32px', fontWeight: '700', color: '#333', marginBottom: '12px' }}>
-                            Xush kelibsiz, <span style={{ color: '#667eea' }}>{user?.first_name + " " + user?.last_name}!</span> 🎉
-                        </h1>
-                        <p style={{ color: '#666', fontSize: '16px', marginBottom: '8px' }}>
-                            Siz muvaffaqiyatli tizimga kirdingiz.
-                        </p>
-                        <p style={{ color: '#666', fontSize: '16px' }}>
-                            Yangi imkoniyatlarni kashf eting!
-                        </p>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '120px' }}>👨‍💻</div>
-                    </div>
-                </div>
-
-                {/* Quizzes Table */}
-                <div style={{
-                    background: 'white',
-                    borderRadius: '16px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                    overflow: 'hidden'
-                }}>
-                    <div style={{
-                        padding: '24px',
-                        borderBottom: '1px solid #e9ecef',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        flexWrap: 'wrap',
-                        gap: '15px'
-                    }}>
-                        <h5 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#333' }}>
-                            <i className="ri-file-list-3-line" style={{ marginRight: '10px', color: '#667eea' }}></i>
+                {/* Quizzes Section */}
+                <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                    <div className="bg-white border-t-4 border-orange-500 p-5 flex justify-between items-center flex-wrap gap-4 shadow-sm">
+                        <h5 className="text-gray-900 font-bold text-lg lg:text-xl flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-orange-500 flex items-center justify-center">
+                                <BookOpen className="w-5 h-5 text-white" />
+                            </div>
                             Mavjud Quizlar
                         </h5>
                         <button
                             onClick={fetchQuizzes}
-                            style={{
-                                padding: '10px 20px',
-                                borderRadius: '10px',
-                                border: '2px solid #667eea',
-                                background: 'white',
-                                color: '#667eea',
-                                cursor: 'pointer',
-                                fontWeight: '600',
-                                transition: 'all 0.3s ease'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.target.style.background = '#667eea';
-                                e.target.style.color = 'white';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.target.style.background = 'white';
-                                e.target.style.color = '#667eea';
-                            }}
+                            className="px-5 py-2.5 rounded-lg bg-orange-500 text-white font-semibold hover:bg-orange-600 transition-colors flex items-center gap-2"
                         >
-                            <i className="ri-refresh-line"></i> Yangilash
+                            <RefreshCw className="w-4 h-4" />
+                            Yangilash
                         </button>
                     </div>
 
-                    {/* Mobile & Desktop Responsive */}
-                    <div style={{ padding: '24px', overflowX: 'auto' }}>
+                    <div className="p-5">
                         {quizzes.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-                                <i className="ri-inbox-line" style={{ fontSize: '60px', color: '#ccc' }}></i>
-                                <h5 style={{ marginTop: '20px', color: '#999' }}>Hozircha quizlar mavjud emas</h5>
-                                <p style={{ color: '#999' }}>Yangi quizlar qo'shilganida bu yerda ko'rinadi</p>
+                            <div className="text-center py-16">
+                                <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                                <h5 className="text-gray-400 font-semibold text-lg">Hozircha quizlar mavjud emas</h5>
+                                <p className="text-gray-400 text-sm mt-2">Yangi quizlar qo'shilganida bu yerda ko'rinadi</p>
                             </div>
                         ) : (
-                            <div style={{ display: 'grid', gap: '16px' }}>
-                                {quizzes.map(quiz => {
-                                    const status = getQuizStatus(quiz);
+                            <>
+                                {/* Desktop Table */}
+                                <div className="hidden lg:block overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead className="bg-gray-50 border-b-2 border-gray-200">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Quiz nomi</th>
+                                                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Fan</th>
+                                                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Sinf</th>
+                                                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Sana</th>
+                                                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Vaqt</th>
+                                                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Urinishlar</th>
+                                                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
+                                                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Amal</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {quizzes.map(quiz => {
+                                                const status = getQuizStatus(quiz);
+                                                return (
+                                                    <tr key={quiz.id} className="hover:bg-gray-50 transition-colors">
+                                                        <td className="px-4 py-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-10 h-10 rounded-lg bg-orange-500 flex items-center justify-center flex-shrink-0">
+                                                                    <BookOpen className="w-5 h-5 text-white" />
+                                                                </div>
+                                                                <span className="font-semibold text-gray-900">{quiz.name}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-4">
+                                                            <span className="px-3 py-1 rounded-lg bg-cyan-100 text-cyan-700 text-sm font-medium">
+                                                                {quiz.subject.name}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-4 text-gray-600 font-medium">{quiz.class}</td>
+                                                        <td className="px-4 py-4 text-gray-600">
+                                                            <div className="flex items-center gap-2">
+                                                                <Calendar className="w-4 h-4 text-gray-400" />
+                                                                {quiz.attachment ? quiz.attachment.date : '-'}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-4 text-gray-600">
+                                                            <div className="flex items-center gap-2">
+                                                                <Clock className="w-4 h-4 text-gray-400" />
+                                                                {quiz.attachment ? quiz.attachment.time : '-'}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-4">
+                                                            <span className={`px-3 py-1 rounded-lg font-bold text-sm ${quiz.attempts.used >= quiz.attempts.total
+                                                                    ? 'bg-red-100 text-red-700'
+                                                                    : 'bg-orange-100 text-orange-700'
+                                                                }`}>
+                                                                {quiz.attempts.used}/{quiz.attempts.total}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-4">
+                                                            <span
+                                                                className="px-3 py-1 rounded-lg text-white text-sm font-medium flex items-center gap-2 w-fit"
+                                                                style={{ backgroundColor: status.bgColor }}
+                                                            >
+                                                                {status.icon}
+                                                                {status.text}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-4">
+                                                            <button
+                                                                disabled={!status.canStart}
+                                                                onClick={() => {
+                                                                    if (status.canStart) {
+                                                                        window.location.href = `#quiz/${quiz.subject.id}/${quiz.id}`;
+                                                                    }
+                                                                }}
+                                                                className={`px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 transition-colors ${status.canStart
+                                                                        ? 'bg-green-500 text-white hover:bg-green-600'
+                                                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                                    }`}
+                                                            >
+                                                                {status.canStart ? <Play className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                                                                {status.canStart ? 'Boshlash' : 'Bloklangan'}
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
 
-                                    return (
-                                        <div
-                                            key={quiz.id}
-                                            style={{
-                                                background: '#f8f9fa',
-                                                borderRadius: '12px',
-                                                padding: '20px',
-                                                border: '2px solid #e9ecef',
-                                                transition: 'all 0.3s ease'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.borderColor = '#667eea';
-                                                e.currentTarget.style.transform = 'translateY(-2px)';
-                                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.borderColor = '#e9ecef';
-                                                e.currentTarget.style.transform = 'translateY(0)';
-                                                e.currentTarget.style.boxShadow = 'none';
-                                            }}
-                                        >
-                                            <div style={{
-                                                display: 'grid',
-                                                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-                                                gap: '16px',
-                                                alignItems: 'center'
-                                            }}>
-                                                {/* Quiz Name */}
-                                                <div>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                        <div style={{
-                                                            width: '40px',
-                                                            height: '40px',
-                                                            borderRadius: '10px',
-                                                            background: '#667eea',
-                                                            color: 'white',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            fontSize: '20px'
-                                                        }}>
-                                                            📝
-                                                        </div>
-                                                        <div>
-                                                            <strong style={{ display: 'block', color: '#333', fontSize: '16px' }}>
-                                                                {quiz.name}
-                                                            </strong>
-                                                            <small style={{ color: '#666' }}>{quiz.class}</small>
-                                                        </div>
+                                {/* Mobile Cards */}
+                                <div className="lg:hidden space-y-4">
+                                    {quizzes.map(quiz => {
+                                        const status = getQuizStatus(quiz);
+                                        return (
+                                            <div
+                                                key={quiz.id}
+                                                className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
+                                            >
+                                                <div className="flex items-center gap-3 mb-4">
+                                                    <div className="w-12 h-12 rounded-lg bg-orange-500 flex items-center justify-center flex-shrink-0">
+                                                        <BookOpen className="w-6 h-6 text-white" />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h3 className="font-bold text-gray-900 truncate">{quiz.name}</h3>
+                                                        <p className="text-sm text-gray-600">{quiz.class}</p>
                                                     </div>
                                                 </div>
 
-                                                {/* Subject */}
-                                                <div>
-                                                    <span style={{
-                                                        display: 'inline-block',
-                                                        padding: '8px 16px',
-                                                        borderRadius: '8px',
-                                                        background: '#17a2b8',
-                                                        color: 'white',
-                                                        fontSize: '14px',
-                                                        fontWeight: '600'
-                                                    }}>
-                                                        📚 {quiz.subject.name}
-                                                    </span>
+                                                <div className="bg-gray-50 rounded-lg p-3 space-y-3 mb-4">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-sm text-gray-600 font-medium">Fan:</span>
+                                                        <span className="px-3 py-1 rounded-lg bg-cyan-100 text-cyan-700 text-xs font-medium">
+                                                            {quiz.subject.name}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-sm text-gray-600 font-medium flex items-center gap-2">
+                                                            <Calendar className="w-4 h-4" />
+                                                            Sana:
+                                                        </span>
+                                                        <span className="text-sm text-gray-900 font-semibold">
+                                                            {quiz.attachment ? quiz.attachment.date : '-'}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-sm text-gray-600 font-medium flex items-center gap-2">
+                                                            <Clock className="w-4 h-4" />
+                                                            Vaqt:
+                                                        </span>
+                                                        <span className="text-sm text-gray-900 font-semibold">
+                                                            {quiz.attachment ? quiz.attachment.time : '-'}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-sm text-gray-600 font-medium flex items-center gap-2">
+                                                            <Target className="w-4 h-4" />
+                                                            Urinishlar:
+                                                        </span>
+                                                        <span className={`px-3 py-1 rounded-lg font-bold text-sm ${quiz.attempts.used >= quiz.attempts.total
+                                                                ? 'bg-red-100 text-red-700'
+                                                                : 'bg-orange-100 text-orange-700'
+                                                            }`}>
+                                                            {quiz.attempts.used}/{quiz.attempts.total}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-sm text-gray-600 font-medium">Status:</span>
+                                                        <span
+                                                            className="px-3 py-1 rounded-lg text-white text-xs font-medium flex items-center gap-2"
+                                                            style={{ backgroundColor: status.bgColor }}
+                                                        >
+                                                            {status.icon}
+                                                            {status.text}
+                                                        </span>
+                                                    </div>
                                                 </div>
 
-                                                {/* Date & Time */}
-                                                <div>
-                                                    {quiz.attachment ? (
-                                                        <>
-                                                            <div style={{ marginBottom: '4px', color: '#666' }}>
-                                                                📅 {quiz.attachment.date}
-                                                            </div>
-                                                            <div style={{ color: '#666' }}>
-                                                                ⏰ {quiz.attachment.time}
-                                                            </div>
-                                                        </>
-                                                    ) : (
-                                                        <span style={{
-                                                            padding: '6px 12px',
-                                                            borderRadius: '6px',
-                                                            background: '#6c757d',
-                                                            color: 'white',
-                                                            fontSize: '13px'
-                                                        }}>-</span>
-                                                    )}
-                                                </div>
-
-                                                {/* Attempts */}
-                                                <div style={{ textAlign: 'center' }}>
-                                                    <span style={{
-                                                        display: 'inline-block',
-                                                        padding: '10px 16px',
-                                                        borderRadius: '8px',
-                                                        background: quiz.attempts.used >= quiz.attempts.total ? '#dc3545' : '#667eea',
-                                                        color: 'white',
-                                                        fontWeight: '600',
-                                                        fontSize: '16px'
-                                                    }}>
-                                                        {quiz.attempts.used}/{quiz.attempts.total}
-                                                    </span>
-                                                    {quiz.attempts.remaining > 0 && (
-                                                        <div style={{ marginTop: '4px', fontSize: '12px', color: '#666' }}>
-                                                            {quiz.attempts.remaining} qolgan
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* Status */}
-                                                <div style={{ textAlign: 'center' }}>
-                                                    <span style={{
-                                                        display: 'inline-block',
-                                                        padding: '8px 16px',
-                                                        borderRadius: '8px',
-                                                        background: status.class === 'bg-success' ? '#28a745' :
-                                                            status.class === 'bg-danger' ? '#dc3545' :
-                                                                status.class === 'bg-warning' ? '#ffc107' :
-                                                                    status.class === 'bg-info' ? '#17a2b8' : '#6c757d',
-                                                        color: 'white',
-                                                        fontSize: '14px',
-                                                        fontWeight: '600'
-                                                    }}>
-                                                        <i className={status.icon}></i> {status.text}
-                                                    </span>
-                                                </div>
-
-                                                {/* Action Button */}
-                                                <div style={{ textAlign: 'center' }}>
-                                                    <button
-                                                        disabled={!status.canStart}
-                                                        onClick={() => {
-                                                            if (status.canStart) {
-                                                                window.location.href = `#quiz/${quiz.subject.id}/${quiz.id}`;
-                                                            }
-                                                        }}
-                                                        style={{
-                                                            padding: '12px 24px',
-                                                            borderRadius: '10px',
-                                                            border: 'none',
-                                                            background: status.canStart ? '#28a745' : '#6c757d',
-                                                            color: 'white',
-                                                            cursor: status.canStart ? 'pointer' : 'not-allowed',
-                                                            fontWeight: '600',
-                                                            transition: 'all 0.3s ease',
-                                                            fontSize: '14px'
-                                                        }}
-                                                        onMouseEnter={(e) => {
-                                                            if (status.canStart) {
-                                                                e.target.style.transform = 'scale(1.05)';
-                                                                e.target.style.boxShadow = '0 4px 12px rgba(40, 167, 69, 0.3)';
-                                                            }
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            if (status.canStart) {
-                                                                e.target.style.transform = 'scale(1)';
-                                                                e.target.style.boxShadow = 'none';
-                                                            }
-                                                        }}
-                                                    >
-                                                        {status.canStart ? (
-                                                            <>
-                                                                <i className="ri-play-circle-line"></i> Boshlash
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <i className="ri-lock-line"></i> Bloklangan
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                </div>
+                                                <button
+                                                    disabled={!status.canStart}
+                                                    onClick={() => {
+                                                        if (status.canStart) {
+                                                            window.location.href = `#quiz/${quiz.subject.id}/${quiz.id}`;
+                                                        }
+                                                    }}
+                                                    className={`w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors ${status.canStart
+                                                            ? 'bg-green-500 text-white hover:bg-green-600'
+                                                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                        }`}
+                                                >
+                                                    {status.canStart ? <Play className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
+                                                    {status.canStart ? 'Boshlash' : 'Bloklangan'}
+                                                </button>
                                             </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </>
                         )}
                     </div>
                 </div>

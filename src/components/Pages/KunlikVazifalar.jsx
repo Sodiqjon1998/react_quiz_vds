@@ -134,7 +134,7 @@ ${completedCount === totalTasks ? '🎉 Ajoyib! Barcha vazifalar bajarildi!' : c
 
             if (token) {
                 const response = await fetch(
-                    `http://localhost:8000/api/tasks?date=${selectedDate}`,
+                    `https://quizvds-production.up.railway.app/api/tasks?date=${selectedDate}`,
                     { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } }
                 );
 
@@ -172,7 +172,7 @@ ${completedCount === totalTasks ? '🎉 Ajoyib! Barcha vazifalar bajarildi!' : c
             const month = currentMonth.getMonth() + 1;
 
             const response = await fetch(
-                `http://localhost:8000/api/stats/monthly?year=${year}&month=${month}`,
+                `https://quizvds-production.up.railway.app/api/stats/monthly?year=${year}&month=${month}`,
                 { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } }
             );
 
@@ -197,7 +197,7 @@ ${completedCount === totalTasks ? '🎉 Ajoyib! Barcha vazifalar bajarildi!' : c
             const token = localStorage.getItem('token');
 
             if (token) {
-                const response = await fetch(`http://localhost:8000/api/tasks/${taskId}/toggle`, {
+                const response = await fetch(`https://quizvds-production.up.railway.app/api/tasks/${taskId}/toggle`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,

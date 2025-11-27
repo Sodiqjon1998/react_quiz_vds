@@ -27,7 +27,7 @@ function Profile() {
             setLoading(true);
             const token = localStorage.getItem('token');
             
-            const response = await fetch('http://localhost:8000/api/user/profile', {
+            const response = await fetch('https://quizvds-production.up.railway.app/api/user/profile', {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'application/json'
@@ -130,7 +130,7 @@ function Profile() {
                 formDataToSend.append('img', imageFile);
             }
 
-            const response = await fetch('http://localhost:8000/api/user/profile/update', {
+            const response = await fetch('https://quizvds-production.up.railway.app/api/user/profile/update', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -221,7 +221,7 @@ function Profile() {
                                         <div className="avatar avatar-xl mb-3 position-relative">
                                             {previewImage || user?.img ? (
                                                 <img 
-                                                    src={previewImage || `http://localhost:8000/storage/${user.img}`} 
+                                                    src={previewImage || `https://quizvds-production.up.railway.app/storage/${user.img}`} 
                                                     alt="Avatar"
                                                     className="rounded-circle border border-3 border-white shadow"
                                                     style={{ width: '250px', objectFit: 'cover', border: '3px double orage' }}
