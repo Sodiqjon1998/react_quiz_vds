@@ -3,7 +3,7 @@ import {
     User, Mail, Phone, Lock, Camera, Save, X, 
     GraduationCap, Loader2, ShieldCheck, Edit3 
 } from 'lucide-react';
-const API_BASE_URL = 'http://localhost:8000';
+import { API_BASE_URL } from '../../config';
 
 
 // ==========================================
