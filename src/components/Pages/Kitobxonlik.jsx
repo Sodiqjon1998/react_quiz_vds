@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BookOpen, Calendar, Clock, Upload, Mic, Play, Square, RefreshCw, File as FileIcon, TrendingUp, CheckCircle, XCircle, AlertCircle, HardDrive } from 'lucide-react';
-// API manzilini umumiy config faylidan import qilamiz
-// Eslatma: Agar fayl joylashuvi o'zgarsa, ../../config yo'lini to'g'irlash kerak bo'lishi mumkin
 import { API_BASE_URL } from '../../config';
+import { Trash2 } from 'lucide-react'; // Icon import qiling
 
 function Kitobxonlik() {
     const [recordings, setRecordings] = useState([]);
@@ -19,8 +18,6 @@ function Kitobxonlik() {
     const [showMicTab, setShowMicTab] = useState(false);
     const [bookName, setBookName] = useState('');
 
-    // API_BASE_URL endi config.js dan olinmoqda, bu yerda mahalliy o'zgaruvchi shart emas.
-
     useEffect(() => {
         fetchReadings();
     }, [selectedMonth, selectedYear]);
@@ -36,21 +33,6 @@ function Kitobxonlik() {
             if (interval) clearInterval(interval);
         };
     }, [isRecording]);
-
-    // --- YANGI: URLni tozalovchi funksiya (MUHIM QISM) ---
-    const getCleanAudioUrl = (url) => {
-        if (!url) return '';
-        
-        // Agar URLda "http" so'zi birdan ortiq qatnashgan bo'lsa (ya'ni dublikat bo'lsa)
-        // Biz oxirgi "http" dan boshlab qirqib olamiz.
-        const lastHttpIndex = url.lastIndexOf('http');
-        
-        if (lastHttpIndex > 0) {
-            return url.substring(lastHttpIndex);
-        }
-        
-        return url;
-    };
 
     const fetchReadings = async () => {
         try {
@@ -74,8 +56,12 @@ function Kitobxonlik() {
             const data = await response.json();
 
             if (data.success) {
+                // Backend dan kelgan data to'g'ridan-to'g'ri ishlatiladi
+                // file_url allaqachon to'liq URL (B2 yoki local)
                 setRecordings(data.data.recordings);
                 setStatistics(data.data.statistics);
+
+                console.log('Recordings loaded:', data.data.recordings);
             } else {
                 console.error('API Error:', data.message);
             }
@@ -106,17 +92,17 @@ function Kitobxonlik() {
             alert('Iltimos, kitob nomini kiriting!');
             return;
         }
-        
+
         setUploading(true);
 
         try {
             const token = localStorage.getItem('token');
             const formData = new FormData();
-            
+
             const safeBookName = bookName.trim().replace(/[^a-zA-Z0-9а-яА-ЯёЁўҚқҒғҲҳ\s]/g, '').replace(/\s+/g, '_');
             const newFileName = `${safeBookName}_${Date.now()}.${selectedFile.name.split('.').pop()}`;
             const renamedFile = new File([selectedFile], newFileName, { type: selectedFile.type });
-            
+
             formData.append('audio', renamedFile);
             formData.append('book_name', bookName);
 
@@ -134,7 +120,7 @@ function Kitobxonlik() {
             if (data.success) {
                 alert('✅ Audio muvaffaqiyatli yuklandi!');
                 setSelectedFile(null);
-                setBookName(''); 
+                setBookName('');
                 fetchReadings();
             } else {
                 alert('❌ Xatolik: ' + data.message);
@@ -155,16 +141,16 @@ function Kitobxonlik() {
 
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            
+
             const options = {
                 mimeType: 'audio/webm;codecs=opus',
                 audioBitsPerSecond: 128000
             };
-            
+
             if (!MediaRecorder.isTypeSupported(options.mimeType)) {
                 options.mimeType = 'audio/webm';
             }
-            
+
             const recorder = new MediaRecorder(stream, options);
             const chunks = [];
 
@@ -201,16 +187,16 @@ function Kitobxonlik() {
         try {
             const token = localStorage.getItem('token');
             const formData = new FormData();
-            
+
             const safeBookName = bookName.trim().replace(/[^a-zA-Z0-9а-яА-ЯёЁўҚқҒғҲҳ\s]/g, '').replace(/\s+/g, '_');
             const fileName = `${safeBookName}_${Date.now()}.webm`;
-            
+
             const file = new File(
-                [recordedBlob], 
-                fileName, 
+                [recordedBlob],
+                fileName,
                 { type: recordedBlob.type }
             );
-            
+
             formData.append('audio', file);
             formData.append('book_name', bookName);
 
@@ -242,6 +228,37 @@ function Kitobxonlik() {
         }
     };
 
+
+
+
+    // Delete funksiyasini qo'shing
+    const handleDelete = async (id) => {
+        if (!confirm('Ushbu audioni o\'chirmoqchimisiz?')) return;
+
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_BASE_URL}/api/readings/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert('✅ Audio o\'chirildi!');
+                fetchReadings(); // Ro'yxatni yangilash
+            } else {
+                alert('❌ Xatolik: ' + data.message);
+            }
+        } catch (err) {
+            console.error('Delete error:', err);
+            alert('❌ Xatolik yuz berdi!');
+        }
+    };
+
     const formatTime = (seconds) => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
@@ -258,14 +275,14 @@ function Kitobxonlik() {
         const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
         const today = new Date();
         const isCurrentMonth = today.getMonth() === selectedMonth && today.getFullYear() === selectedYear;
-        
+
         const days = [];
         for (let day = 1; day <= daysInMonth; day++) {
             const hasRecording = recordings.some(r => {
                 const recordDate = new Date(r.created_at);
                 return recordDate.getDate() === day &&
-                       recordDate.getMonth() === selectedMonth &&
-                       recordDate.getFullYear() === selectedYear;
+                    recordDate.getMonth() === selectedMonth &&
+                    recordDate.getFullYear() === selectedYear;
             });
 
             const isPast = isCurrentMonth ? day <= today.getDate() : true;
@@ -357,7 +374,7 @@ function Kitobxonlik() {
                     </div>
                 </div>
 
-                {/* Upload Section */}
+                {/* Upload Section - Unchanged */}
                 <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm">
                     <h2 className="text-xl font-bold text-gray-900 mb-5 flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-orange-500 flex items-center justify-center">
@@ -370,22 +387,20 @@ function Kitobxonlik() {
                     <div className="flex gap-2 border-b border-gray-200 mb-6">
                         <button
                             onClick={() => setShowMicTab(false)}
-                            className={`px-5 py-3 font-semibold text-sm transition-all flex items-center gap-2 ${
-                                !showMicTab 
-                                    ? 'border-b-2 border-orange-500 text-orange-500' 
-                                    : 'text-gray-600'
-                            }`}
+                            className={`px-5 py-3 font-semibold text-sm transition-all flex items-center gap-2 ${!showMicTab
+                                ? 'border-b-2 border-orange-500 text-orange-500'
+                                : 'text-gray-600'
+                                }`}
                         >
                             <FileIcon className="w-4 h-4" />
                             Fayl yuklash
                         </button>
                         <button
                             onClick={() => setShowMicTab(true)}
-                            className={`px-5 py-3 font-semibold text-sm transition-all flex items-center gap-2 ${
-                                showMicTab 
-                                    ? 'border-b-2 border-orange-500 text-orange-500' 
-                                    : 'text-gray-600'
-                            }`}
+                            className={`px-5 py-3 font-semibold text-sm transition-all flex items-center gap-2 ${showMicTab
+                                ? 'border-b-2 border-orange-500 text-orange-500'
+                                : 'text-gray-600'
+                                }`}
                         >
                             <Mic className="w-4 h-4" />
                             Mikrofon
@@ -435,11 +450,10 @@ function Kitobxonlik() {
                             <button
                                 onClick={handleUpload}
                                 disabled={!selectedFile || uploading}
-                                className={`px-6 py-3 rounded-lg font-semibold text-sm flex items-center gap-2 transition-all ${
-                                    selectedFile && !uploading 
-                                        ? 'bg-orange-500 text-white hover:bg-orange-600' 
-                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                }`}
+                                className={`px-6 py-3 rounded-lg font-semibold text-sm flex items-center gap-2 transition-all ${selectedFile && !uploading
+                                    ? 'bg-orange-500 text-white hover:bg-orange-600'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    }`}
                             >
                                 <Upload className="w-4 h-4" />
                                 {uploading ? 'Yuklanmoqda...' : 'Yuklash'}
@@ -447,7 +461,7 @@ function Kitobxonlik() {
                         </div>
                     )}
 
-                    {/* Microphone Tab */}
+                    {/* Microphone Tab - Unchanged */}
                     {showMicTab && (
                         <div className="text-center py-8">
                             {!isRecording && !recordedBlob && (
@@ -548,7 +562,7 @@ function Kitobxonlik() {
                     )}
                 </div>
 
-                {/* Calendar */}
+                {/* Calendar - Unchanged */}
                 <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm">
                     <div className="flex justify-between items-center mb-5 flex-wrap gap-4">
                         <h2 className="text-xl font-bold text-gray-900 flex items-center gap-3">
@@ -598,7 +612,7 @@ function Kitobxonlik() {
                         {getCalendarData().map(({ day, hasRecording, isPast, isFuture }) => {
                             let bgColor = 'bg-gray-200';
                             let textColor = 'text-gray-600';
-                            
+
                             if (isPast && !isFuture) {
                                 if (hasRecording) {
                                     bgColor = 'bg-green-500';
@@ -619,8 +633,7 @@ function Kitobxonlik() {
                                     `}
                                 >
                                     {day}
-                                    
-                                    {/* Tooltip for hover effect */}
+
                                     {hasRecording && (
                                         <div className="absolute bottom-full mb-2 hidden group-hover:block z-10 w-max">
                                             <div className="bg-gray-800 text-white text-xs rounded py-1 px-2">
@@ -634,7 +647,7 @@ function Kitobxonlik() {
                     </div>
                 </div>
 
-                {/* Recordings History List */}
+                {/* Recordings History List - YANGILANDI */}
                 <div className="bg-white rounded-2xl p-6 shadow-sm">
                     <h2 className="text-xl font-bold text-gray-900 mb-5 flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center">
@@ -651,48 +664,63 @@ function Kitobxonlik() {
                                         <div className="flex items-center gap-4">
                                             <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-500 font-bold shrink-0">
                                                 {new Date(rec.created_at).getDate()}
-                                            </div>
-                                            <div>
-                                                <h4 className="font-bold text-gray-900 text-sm sm:text-base">
-                                                    {rec.book_name || "Nomsiz kitob"}
-                                                </h4>
-                                                <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-                                                    <span className="flex items-center gap-1">
-                                                        <Calendar className="w-3 h-3" />
-                                                        {new Date(rec.created_at).toLocaleDateString()}
-                                                    </span>
-                                                    <span className="flex items-center gap-1">
+                                            </div><div className="flex-1 min-w-0">
+                                                <h3 className="font-bold text-gray-900 truncate mb-1">
+                                                    {rec.book_name || rec.filename}
+                                                </h3>
+                                                <div className="flex flex-wrap gap-3 text-xs text-gray-600">
+                                                    <div className="flex items-center gap-1">
                                                         <Clock className="w-3 h-3" />
-                                                        {new Date(rec.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                    </span>
+                                                        {formatTime(rec.duration)}
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <FileIcon className="w-3 h-3" />
+                                                        {rec.file_size}
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <Calendar className="w-3 h-3" />
+                                                        {new Date(rec.created_at).toLocaleDateString('uz-UZ')}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="w-full sm:w-1/3">
-                                            <audio 
-                                                controls 
-                                                // --- TOZALOVCHI FUNKSIYA ISHLATILDI ---
-                                                src={getCleanAudioUrl(rec.audio_url)} 
-                                                className="w-full h-8" 
-                                                preload="none"
+                                        <div className="flex gap-2">
+                                            {/* Audio Player */}
+                                            <audio
+                                                controls
+                                                src={rec.file_url}
+                                                className="w-full sm:w-64 h-10"
+                                                preload="metadata"
                                             />
+
+                                            {/* 🗑️ O'chirish tugmasi */}
+                                            <button
+                                                onClick={() => handleDelete(rec.id)}
+                                                className="p-2.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                                                title="O'chirish"
+                                            >
+                                                <Trash2 className="w-5 h-5" />
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
                             ))
                         ) : (
-                            <div className="text-center py-10 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-                                <div className="bg-gray-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                                    <Mic className="w-6 h-6 text-gray-400" />
+                            <div className="text-center py-12">
+                                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                                    <AlertCircle className="w-8 h-8 text-gray-400" />
                                 </div>
-                                <p className="text-gray-500 font-medium">Bu oyda hali hech narsa yuklanmagan</p>
-                                <p className="text-gray-400 text-sm">Kitob o'qing va natijangizni qayd eting!</p>
+                                <p className="text-gray-500 font-medium">
+                                    Hozircha audio yuklanmagan
+                                </p>
+                                <p className="text-sm text-gray-400 mt-1">
+                                    Yuqoridagi formadan birinchi audioni yuklang
+                                </p>
                             </div>
                         )}
                     </div>
                 </div>
-
             </div>
         </div>
     );
