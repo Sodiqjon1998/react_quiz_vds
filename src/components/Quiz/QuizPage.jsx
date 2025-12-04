@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { 
-    BookOpen, Clock, CheckCircle, XCircle, AlertCircle, 
-    HelpCircle, Flag, ArrowLeft, ArrowRight, Send, 
-    CheckSquare, RotateCcw, LayoutGrid, Award, Timer, 
-    ChevronRight, ChevronLeft, Check, AlertTriangle 
+import {
+    BookOpen, Clock, CheckCircle, XCircle, AlertCircle,
+    HelpCircle, Flag, ArrowLeft, ArrowRight, Send,
+    CheckSquare, RotateCcw, LayoutGrid, Award, Timer,
+    ChevronRight, ChevronLeft, Check, AlertTriangle
 } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
 
@@ -102,12 +102,12 @@ function QuizPage({ quizId, subjectId, onBack }) {
 
             if (data.success) {
                 setQuiz(data.data.quiz_details);
-                
+
                 const processedQuestions = data.data.questions.map(q => ({
                     ...q,
                     image: getImageUrl(q.image)
                 }));
-                
+
                 setQuestions(processedQuestions);
 
                 const timeString = data.data.quiz_details.attachment?.time || "00:30:00";
@@ -167,57 +167,68 @@ function QuizPage({ quizId, subjectId, onBack }) {
     };
 
     const handleSubmit = async () => {
-    if (isSubmitting) return;
+        if (isSubmitting) return;
 
-    const unanswered = questions.length - Object.keys(answers).length;
-    if (unanswered > 0 && timeLeft > 0) {
-        if (!confirm(`${unanswered} ta savolga javob bermaganmisiz. Baribir topshirasizmi?`)) {
-            return;
-        }
-    }
-
-    setIsSubmitting(true);
-    setTimeLeft(0);
-
-    try {
-        const token = localStorage.getItem('token');
-        // ✅ subjectId ni ham qo'shing
-        const response = await fetch(`${API_BASE_URL}/api/quiz/${subjectId}/${quizId}/submit`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({
-                answers: answers
-            })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            clearState();
-            
-            if (data.data.detailed_results) {
-                data.data.detailed_results = data.data.detailed_results.map(result => ({
-                    ...result,
-                    question_image: getImageUrl(result.question_image)
-                }));
+        const unanswered = questions.length - Object.keys(answers).length;
+        if (unanswered > 0 && timeLeft > 0) {
+            if (!confirm(`${unanswered} ta savolga javob bermaganmisiz. Baribir topshirasizmi?`)) {
+                return;
             }
-            
-            setQuizResult(data.data);
-            setShowResultModal(true);
-        } else {
-            throw new Error(data.message);
         }
-    } catch (err) {
-        console.error('Submit error:', err);
-        alert('Xatolik: ' + err.message);
-    } finally {
-        setIsSubmitting(false);
-    }
-};
+
+        setIsSubmitting(true);
+        setTimeLeft(0);
+
+        try {
+            const token = localStorage.getItem('token');
+
+            // ✅ Javoblarni to'g'ri formatda tayyorlash
+            const formattedAnswers = {};
+            questions.forEach(question => {
+                formattedAnswers[question.id] = answers[question.id] || null;
+            });
+
+            const response = await fetch(`${API_BASE_URL}/api/quiz/${subjectId}/${quizId}/submit`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    answers: formattedAnswers  // ✅ Format: {question_id: option_id}
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Xatolik yuz berdi');
+            }
+
+            if (data.success) {
+                clearState();
+
+                // ✅ Rasm URL'larini to'g'rilash
+                if (data.data.detailed_results) {
+                    data.data.detailed_results = data.data.detailed_results.map(result => ({
+                        ...result,
+                        question_image: getImageUrl(result.question_image)
+                    }));
+                }
+
+                setQuizResult(data.data);
+                setShowResultModal(true);
+            } else {
+                throw new Error(data.message);
+            }
+        } catch (err) {
+            console.error('Submit error:', err);
+            alert('Xatolik: ' + err.message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     const formatTime = (seconds) => {
         const h = Math.floor(seconds / 3600);
@@ -248,8 +259,8 @@ function QuizPage({ quizId, subjectId, onBack }) {
                     {/* Modal Header */}
                     <div className={`p-6 text-center ${passed ? 'bg-green-500' : 'bg-red-500'} text-white`}>
                         <div className="flex justify-center mb-3">
-                            {passed ? 
-                                <Award className="w-16 h-16 text-white animate-bounce" /> : 
+                            {passed ?
+                                <Award className="w-16 h-16 text-white animate-bounce" /> :
                                 <AlertTriangle className="w-16 h-16 text-white" />
                             }
                         </div>
@@ -270,7 +281,7 @@ function QuizPage({ quizId, subjectId, onBack }) {
                                 <div className="text-3xl font-bold text-blue-600">{score} / {total_questions}</div>
                                 <div className="text-xs text-gray-500 font-medium uppercase tracking-wider">To'g'ri Javoblar</div>
                             </div>
-                            
+
                             <div className="bg-white p-4 rounded-xl border border-orange-100 shadow-sm flex flex-col items-center justify-center">
                                 <div className="w-8 h-8 flex items-center justify-center rounded-full bg-orange-100 text-orange-500 font-bold mb-2">%</div>
                                 <div className="text-3xl font-bold text-orange-600">{percentage}%</div>
@@ -278,8 +289,8 @@ function QuizPage({ quizId, subjectId, onBack }) {
                             </div>
 
                             <div className={`bg-white p-4 rounded-xl border shadow-sm flex flex-col items-center justify-center ${passed ? 'border-green-100' : 'border-red-100'}`}>
-                                {passed ? 
-                                    <CheckSquare className="w-8 h-8 text-green-500 mb-2" /> : 
+                                {passed ?
+                                    <CheckSquare className="w-8 h-8 text-green-500 mb-2" /> :
                                     <XCircle className="w-8 h-8 text-red-500 mb-2" />
                                 }
                                 <div className={`text-3xl font-bold ${passed ? 'text-green-600' : 'text-red-600'}`}>
@@ -298,42 +309,42 @@ function QuizPage({ quizId, subjectId, onBack }) {
 
                         <div className="space-y-4">
                             {detailed_results && detailed_results.map((result, index) => {
+                                // ✅ Backend'dan kelgan ma'lumotlarni to'g'ri ishlatish
                                 const question = questions.find(q => q.id === result.question_id);
                                 const letters = ['A', 'B', 'C', 'D'];
 
                                 return (
                                     <div key={result.question_id} className={`bg-white border-l-4 rounded-r-xl shadow-sm overflow-hidden ${result.is_correct ? 'border-green-500' : 'border-red-500'}`}>
                                         <div className="p-4 border-b border-gray-100 flex justify-between items-start bg-gray-50/50">
-                                            <div className="flex gap-3">
+                                            <div className="flex gap-3 flex-1">
                                                 <span className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-sm font-bold ${result.is_correct ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                                     {index + 1}
                                                 </span>
-                                                <div>
-                                                    <div className="font-medium text-gray-800 mb-1" dangerouslySetInnerHTML={{ __html: question?.name }} />
+                                                <div className="flex-1">
+                                                    <div className="font-medium text-gray-800 mb-2" dangerouslySetInnerHTML={{ __html: result.question_text || question?.name }} />
+
+                                                    {/* ✅ Savol rasmi */}
+                                                    {result.question_image && (
+                                                        <img
+                                                            src={result.question_image}
+                                                            alt="Question"
+                                                            className="max-h-48 object-contain rounded-lg border border-gray-200 mt-2"
+                                                            onError={(e) => e.target.style.display = 'none'}
+                                                        />
+                                                    )}
                                                 </div>
                                             </div>
-                                            {result.is_correct ? 
-                                                <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0" /> : 
+                                            {result.is_correct ?
+                                                <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0" /> :
                                                 <XCircle className="w-6 h-6 text-red-500 flex-shrink-0" />
                                             }
                                         </div>
-
-                                        {question?.image && (
-                                            <div className="px-4 pt-4">
-                                                <img 
-                                                    src={question.image} 
-                                                    alt="Question" 
-                                                    className="max-h-48 object-contain rounded-lg border border-gray-200"
-                                                    onError={(e) => e.target.style.display = 'none'}
-                                                />
-                                            </div>
-                                        )}
 
                                         <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                                             {question?.options?.map((option, optIdx) => {
                                                 const isCorrect = option.id === result.correct_option_id;
                                                 const isSelected = option.id === result.selected_option_id;
-                                                
+
                                                 let optionClass = "border border-gray-200 bg-white";
                                                 if (isCorrect) optionClass = "border-green-500 bg-green-50 text-green-900";
                                                 else if (isSelected && !isCorrect) optionClass = "border-red-500 bg-red-50 text-red-900";
@@ -343,9 +354,9 @@ function QuizPage({ quizId, subjectId, onBack }) {
                                                         <span className={`w-6 h-6 flex items-center justify-center rounded text-xs font-bold ${isCorrect ? 'bg-green-200 text-green-800' : (isSelected ? 'bg-red-200 text-red-800' : 'bg-gray-100 text-gray-600')}`}>
                                                             {letters[optIdx]}
                                                         </span>
-                                                        <div dangerouslySetInnerHTML={{ __html: option.name }} />
-                                                        {isCorrect && <Check className="w-4 h-4 text-green-600 ml-auto" />}
-                                                        {isSelected && !isCorrect && <XCircle className="w-4 h-4 text-red-600 ml-auto" />}
+                                                        <div className="flex-1" dangerouslySetInnerHTML={{ __html: option.name }} />
+                                                        {isCorrect && <Check className="w-4 h-4 text-green-600" />}
+                                                        {isSelected && !isCorrect && <XCircle className="w-4 h-4 text-red-600" />}
                                                     </div>
                                                 );
                                             })}
@@ -392,7 +403,7 @@ function QuizPage({ quizId, subjectId, onBack }) {
                     <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
                     <h3 className="text-xl font-bold text-gray-800 mb-2">Xatolik yuz berdi</h3>
                     <p className="text-gray-600 mb-6">{error}</p>
-                    <button 
+                    <button
                         onClick={onBack}
                         className="px-6 py-3 bg-gray-800 text-white rounded-xl font-semibold hover:bg-gray-900 transition-colors w-full"
                     >
@@ -425,14 +436,13 @@ function QuizPage({ quizId, subjectId, onBack }) {
                                     {quiz?.name}
                                 </h2>
                             </div>
-                            
-                            <button 
+
+                            <button
                                 onClick={() => toggleMarkForReview(currentQuestion?.id)}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                                    markedForReview[currentQuestion?.id] 
-                                    ? 'bg-yellow-400 text-yellow-900 font-bold' 
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${markedForReview[currentQuestion?.id]
+                                    ? 'bg-yellow-400 text-yellow-900 font-bold'
                                     : 'bg-white/10 hover:bg-white/20 text-white'
-                                }`}
+                                    }`}
                             >
                                 <Flag className="w-4 h-4" />
                                 <span className="text-sm">Belgilash</span>
@@ -464,13 +474,13 @@ function QuizPage({ quizId, subjectId, onBack }) {
                                     const letters = ['A', 'B', 'C', 'D'];
 
                                     return (
-                                        <div 
+                                        <div
                                             key={option.id}
                                             onClick={() => handleAnswerSelect(currentQuestion.id, option.id)}
                                             className={`
                                                 relative group p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 flex items-start gap-4
-                                                ${isSelected 
-                                                    ? 'border-blue-500 bg-blue-50 shadow-md' 
+                                                ${isSelected
+                                                    ? 'border-blue-500 bg-blue-50 shadow-md'
                                                     : 'border-gray-200 hover:border-blue-200 hover:bg-gray-50'}
                                             `}
                                         >
@@ -481,7 +491,7 @@ function QuizPage({ quizId, subjectId, onBack }) {
                                                 {letters[idx]}
                                             </div>
                                             <div className={`flex-1 text-base ${isSelected ? 'text-blue-900 font-medium' : 'text-gray-700'}`} dangerouslySetInnerHTML={{ __html: option.name }} />
-                                            
+
                                             {/* Radio circle visual */}
                                             <div className={`
                                                 w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1
@@ -500,11 +510,10 @@ function QuizPage({ quizId, subjectId, onBack }) {
                             <button
                                 onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
                                 disabled={currentQuestionIndex === 0}
-                                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold transition-colors ${
-                                    currentQuestionIndex === 0 
-                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold transition-colors ${currentQuestionIndex === 0
+                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                     : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300 shadow-sm'
-                                }`}
+                                    }`}
                             >
                                 <ArrowLeft className="w-5 h-5" />
                                 Oldingi
@@ -561,16 +570,16 @@ function QuizPage({ quizId, subjectId, onBack }) {
                                 <LayoutGrid className="w-5 h-5 text-gray-400" />
                                 Savollar xaritasi
                             </h4>
-                            
+
                             <div className="grid grid-cols-5 gap-2">
                                 {questions.map((_, index) => {
                                     const status = getQuestionStatus(index);
                                     let btnClass = "bg-gray-100 text-gray-500 hover:bg-gray-200"; // Default
-                                    
+
                                     if (status === 'answered') btnClass = "bg-blue-500 text-white shadow-sm shadow-blue-200";
                                     else if (status === 'marked') btnClass = "bg-yellow-400 text-yellow-900 border border-yellow-500";
                                     else if (status === 'answered-marked') btnClass = "bg-gradient-to-br from-blue-500 to-yellow-400 text-white";
-                                    
+
                                     if (currentQuestionIndex === index) {
                                         btnClass += " ring-2 ring-offset-2 ring-blue-500";
                                     }
@@ -602,7 +611,7 @@ function QuizPage({ quizId, subjectId, onBack }) {
                                 </div>
                             </div>
                         </div>
-                        
+
                         <button
                             onClick={handleSubmit}
                             disabled={isSubmitting}
