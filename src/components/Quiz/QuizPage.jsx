@@ -167,56 +167,57 @@ function QuizPage({ quizId, subjectId, onBack }) {
     };
 
     const handleSubmit = async () => {
-        if (isSubmitting) return;
+    if (isSubmitting) return;
 
-        const unanswered = questions.length - Object.keys(answers).length;
-        if (unanswered > 0 && timeLeft > 0) {
-            if (!confirm(`${unanswered} ta savolga javob bermaganmisiz. Baribir topshirasizmi?`)) {
-                return;
-            }
+    const unanswered = questions.length - Object.keys(answers).length;
+    if (unanswered > 0 && timeLeft > 0) {
+        if (!confirm(`${unanswered} ta savolga javob bermaganmisiz. Baribir topshirasizmi?`)) {
+            return;
         }
+    }
 
-        setIsSubmitting(true);
-        setTimeLeft(0);
+    setIsSubmitting(true);
+    setTimeLeft(0);
 
-        try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`${API_BASE_URL}/api/quiz/${quizId}/submit`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    answers: answers
-                })
-            });
+    try {
+        const token = localStorage.getItem('token');
+        // ✅ subjectId ni ham qo'shing
+        const response = await fetch(`${API_BASE_URL}/api/quiz/${subjectId}/${quizId}/submit`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                answers: answers
+            })
+        });
 
-            const data = await response.json();
+        const data = await response.json();
 
-            if (data.success) {
-                clearState();
-                
-                if (data.data.detailed_results) {
-                    data.data.detailed_results = data.data.detailed_results.map(result => ({
-                        ...result,
-                        question_image: getImageUrl(result.question_image)
-                    }));
-                }
-                
-                setQuizResult(data.data);
-                setShowResultModal(true);
-            } else {
-                throw new Error(data.message);
+        if (data.success) {
+            clearState();
+            
+            if (data.data.detailed_results) {
+                data.data.detailed_results = data.data.detailed_results.map(result => ({
+                    ...result,
+                    question_image: getImageUrl(result.question_image)
+                }));
             }
-        } catch (err) {
-            console.error('Submit error:', err);
-            alert('Xatolik: ' + err.message);
-        } finally {
-            setIsSubmitting(false);
+            
+            setQuizResult(data.data);
+            setShowResultModal(true);
+        } else {
+            throw new Error(data.message);
         }
-    };
+    } catch (err) {
+        console.error('Submit error:', err);
+        alert('Xatolik: ' + err.message);
+    } finally {
+        setIsSubmitting(false);
+    }
+};
 
     const formatTime = (seconds) => {
         const h = Math.floor(seconds / 3600);
