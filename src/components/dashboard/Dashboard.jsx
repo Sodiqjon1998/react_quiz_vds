@@ -259,8 +259,6 @@ function Dashboard({ user = { first_name: 'Jasur', last_name: 'Aliyev' } }) {
                                                                 disabled={!status.canStart}
                                                                 onClick={() => {
                                                                     if (status.canStart) {
-                                                                        console.log(window.location.href = `#/quiz/${quiz.subject.id}/${quiz.id}`);
-                                                                        
                                                                         window.location.href = `#quiz/${quiz.subject.id}/${quiz.id}`;
                                                                     }
                                                                 }}

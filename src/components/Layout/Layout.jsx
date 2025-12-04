@@ -27,11 +27,16 @@ function Layout({ user, onLogout }) {
     useEffect(() => {
         const handleHashChange = () => {
             const hash = window.location.hash.slice(1); // "#" ni olib tashlash
+            console.log('Current hash:', hash); // DEBUG
 
             if (hash.startsWith('quiz/')) {
                 const parts = hash.split('/');
+                console.log('Hash parts:', parts); // DEBUG
+
                 if (parts.length === 3) {
                     const [_, subjectId, quizId] = parts;
+                    console.log('Parsed params:', { subjectId, quizId }); // DEBUG
+
                     setQuizParams({ subjectId, quizId });
                     setCurrentPage('quiz');
                 }
