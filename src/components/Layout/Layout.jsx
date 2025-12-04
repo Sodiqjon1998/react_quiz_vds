@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
-import Dashboard from '../Dashboard/Dashboard';
-import Darslar from '../Pages/Darslar';
-import Topshiriqlar from '../Pages/Topshiriqlar';
-import QuizPage from '../Quiz/QuizPage';
-import Kitobxonlik from '../Pages/Kitobxonlik';
-import KunlikVazifalar from '../Pages/KunlikVazifalar';
-import Profile from '../Pages/Profile';
+import Dashboard from '../dashboard/Dashboard';
+import Darslar from '../pages/Darslar';
+import Topshiriqlar from '../pages/Topshiriqlar';
+import QuizPage from '../quiz/QuizPage';
+import Kitobxonlik from '../pages/Kitobxonlik';
+import KunlikVazifalar from '../pages/KunlikVazifalar';
+import Profile from '../pages/Profile';
 
 function Layout({ user, onLogout }) {
     const [currentPage, setCurrentPage] = useState('dashboard');
