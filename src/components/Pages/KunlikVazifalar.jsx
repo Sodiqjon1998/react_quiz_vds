@@ -7,9 +7,7 @@ import {
 } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
 
-// ==========================================
-// ⚙️ SOZLAMALAR (CONFIG)
-// ==========================================
+const TELEGRAM_BOT_TOKEN = '7592801638:AAEClfSkBNUweKdfJkB7_C2zfrOmOKc20r4';
 
 function KunlikVazifalar() {
     const [tasks, setTasks] = useState([]);
@@ -24,10 +22,6 @@ function KunlikVazifalar() {
     const [userProfile, setUserProfile] = useState(null);
     const [showIconPicker, setShowIconPicker] = useState(false);
 
-    // Telegram bot token
-    const TELEGRAM_BOT_TOKEN = '7592801638:AAEClfSkBNUweKdfJkB7_C2zfrOmOKc20r4';
-
-    // Vazifa nomiga qarab ikonka tanlash
     const getTaskIcon = (name) => {
         const lowerName = name.toLowerCase();
         if (lowerName.includes('uyg\'onish')) return <Sun className="w-6 h-6 text-orange-500" />;
@@ -42,14 +36,15 @@ function KunlikVazifalar() {
         return <LayoutGrid className="w-6 h-6 text-gray-500" />;
     };
 
-    // Foydalanuvchi tanlashi mumkin bo'lgan belgilar
     const userIcons = [
-        { icon: <Star className="w-5 h-5" />, label: 'Yulduz' },
-        { icon: <Trophy className="w-5 h-5" />, label: 'Kubok' },
-        { icon: <Zap className="w-5 h-5" />, label: 'Chaqmoq' },
-        { icon: <Award className="w-5 h-5" />, label: 'Medal' },
-        { icon: <Crown className="w-5 h-5" />, label: 'Toj' },
-        { icon: <Heart className="w-5 h-5" />, label: 'Yurak' },
+        { icon: '⭐', label: 'Yulduz' },
+        { icon: '🏆', label: 'Kubok' },
+        { icon: '⚡', label: 'Chaqmoq' },
+        { icon: '🏅', label: 'Medal' },
+        { icon: '👑', label: 'Toj' },
+        { icon: '❤️', label: 'Yurak' },
+        { icon: '🎯', label: 'Nishon' },
+        { icon: '🔥', label: 'Olov' },
     ];
 
     useEffect(() => {
@@ -147,7 +142,6 @@ ${completedCount === totalTasks ? '🎉 Ajoyib! Barcha vazifalar bajarildi!' : c
             setLoading(true);
             const token = localStorage.getItem('token');
 
-            // Default tasks
             const defaultTasks = [
                 { id: 1, name: 'Erta uyg\'onish', is_completed: null },
                 { id: 2, name: 'Jismoniy tarbiya', is_completed: null },
@@ -318,7 +312,6 @@ ${completedCount === totalTasks ? '🎉 Ajoyib! Barcha vazifalar bajarildi!' : c
 
                 {/* Main Content Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
                     {/* Left Column: Calendar & User Info */}
                     <div className="lg:col-span-1 space-y-6">
                         {/* Date Selector */}
@@ -347,11 +340,15 @@ ${completedCount === totalTasks ? '🎉 Ajoyib! Barcha vazifalar bajarildi!' : c
                             {showCalendar && (
                                 <div className="animate-fade-in">
                                     <div className="flex justify-between items-center mb-4">
-                                        <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-2 hover:bg-gray-100 rounded-lg">←</button>
+                                        <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                                            ←
+                                        </button>
                                         <span className="font-bold text-gray-700 capitalize">
                                             {currentMonth.toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' })}
                                         </span>
-                                        <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="p-2 hover:bg-gray-100 rounded-lg">→</button>
+                                        <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                                            →
+                                        </button>
                                     </div>
                                     <div className="grid grid-cols-7 gap-1 mb-2">
                                         {['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'].map(d => (
@@ -363,8 +360,6 @@ ${completedCount === totalTasks ? '🎉 Ajoyib! Barcha vazifalar bajarildi!' : c
                                             const { daysInMonth, startingDayOfWeek } = getDaysInMonth(currentMonth);
                                             const days = [];
                                             const today = new Date().toISOString().split('T')[0];
-
-                                            // Adjust starting day (JS Sunday is 0, usually calendar starts Monday)
                                             const adjustStart = startingDayOfWeek === 0 ? 6 : startingDayOfWeek - 1;
 
                                             for (let i = 0; i < adjustStart; i++) days.push(<div key={`empty-${i}`} />);
@@ -398,41 +393,45 @@ ${completedCount === totalTasks ? '🎉 Ajoyib! Barcha vazifalar bajarildi!' : c
                             )}
                         </div>
 
-                        {/* User Name Input */}
+                        {/* User Name Input - TUZATILGAN */}
                         <div className="bg-white rounded-2xl shadow-sm p-6">
                             <h3 className="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">
                                 <User className="w-5 h-5 text-blue-500" />
                                 O'quvchi Ismi
                             </h3>
                             <div className="relative">
-                                <input
-                                    type="text"
-                                    value={userName}
-                                    onChange={(e) => setUserName(e.target.value)}
-                                    placeholder="Ism familiya..."
-                                    className="w-full px-4 py-3 pl-10 rounded-xl border border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
-                                />
-                                <User className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                                <button
-                                    onClick={() => setShowIconPicker(!showIconPicker)}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
-                                >
-                                    <Smile className="w-5 h-5" />
-                                </button>
+                                <div className="relative flex items-center">
+                                    <User className="w-5 h-5 text-gray-400 absolute left-3 pointer-events-none z-10" />
+                                    <input
+                                        type="text"
+                                        value={userName}
+                                        onChange={(e) => setUserName(e.target.value)}
+                                        placeholder="Ism familiya..."
+                                        className="w-full px-4 py-3 pl-10 pr-12 rounded-xl border border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
+                                    />
+                                    <button
+                                        onClick={() => setShowIconPicker(!showIconPicker)}
+                                        className="absolute right-2 p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors z-10"
+                                        type="button"
+                                    >
+                                        <Smile className="w-5 h-5" />
+                                    </button>
+                                </div>
 
                                 {showIconPicker && (
-                                    <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 p-3 z-50 animate-in fade-in zoom-in duration-200">
+                                    <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 p-3 z-50">
                                         <div className="grid grid-cols-4 gap-2">
                                             {userIcons.map((item, idx) => (
                                                 <button
                                                     key={idx}
                                                     onClick={() => {
-                                                        setUserName(prev => prev + ' ' + (item.label === 'Yulduz' ? '⭐' : item.label === 'Kubok' ? '🏆' : '⚡')); // Oddiyroq qilib qo'shish
+                                                        setUserName(prev => prev.trim() + ' ' + item.icon);
                                                         setShowIconPicker(false);
                                                     }}
-                                                    className="p-2 hover:bg-orange-50 rounded-lg flex flex-col items-center gap-1 transition-colors"
+                                                    className="p-3 hover:bg-orange-50 rounded-lg flex flex-col items-center gap-1 transition-colors"
+                                                    type="button"
                                                 >
-                                                    <div className="text-orange-500">{item.icon}</div>
+                                                    <span className="text-2xl">{item.icon}</span>
                                                     <span className="text-[10px] text-gray-500">{item.label}</span>
                                                 </button>
                                             ))}
