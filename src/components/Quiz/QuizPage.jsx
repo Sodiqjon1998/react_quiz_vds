@@ -6,6 +6,7 @@ import {
     ChevronRight, ChevronLeft, Check, AlertTriangle, RefreshCw
 } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
+import MathText from './MathText';
 
 
 function QuizPage({ quizId, subjectId, onBack }) {
@@ -177,9 +178,12 @@ function QuizPage({ quizId, subjectId, onBack }) {
         try {
             const token = localStorage.getItem('token');
 
+            // Faqat javob berilgan savollarni yuborish
             const formattedAnswers = {};
             questions.forEach(question => {
-                formattedAnswers[question.id] = answers[question.id] || null;
+                if (answers[question.id]) {
+                    formattedAnswers[question.id] = answers[question.id];
+                }
             });
 
             const response = await fetch(`${API_BASE_URL}/api/quiz/${subjectId}/${quizId}/submit`, {
@@ -310,7 +314,9 @@ function QuizPage({ quizId, subjectId, onBack }) {
                                                     {index + 1}
                                                 </span>
                                                 <div className="flex-1">
-                                                    <div className="font-medium text-gray-800 mb-2" dangerouslySetInnerHTML={{ __html: result.question_text || question?.name }} />
+                                                    <MathText className="font-medium text-gray-800 mb-2">
+                                                        {result.question_text || question?.name}
+                                                    </MathText>
 
                                                     {result.question_image && (
                                                         <img
@@ -342,7 +348,9 @@ function QuizPage({ quizId, subjectId, onBack }) {
                                                         <span className={`w-6 h-6 flex items-center justify-center rounded text-xs font-bold ${isCorrect ? 'bg-green-200 text-green-800' : (isSelected ? 'bg-red-200 text-red-800' : 'bg-gray-100 text-gray-600')}`}>
                                                             {letters[optIdx]}
                                                         </span>
-                                                        <div className="flex-1" dangerouslySetInnerHTML={{ __html: option.name }} />
+                                                        <MathText className="flex-1">
+                                                            {option.name}
+                                                        </MathText>
                                                         {isCorrect && <Check className="w-4 h-4 text-green-600" />}
                                                         {isSelected && !isCorrect && <XCircle className="w-4 h-4 text-red-600" />}
                                                     </div>
@@ -435,7 +443,9 @@ function QuizPage({ quizId, subjectId, onBack }) {
                         </div>
 
                         <div className="p-6">
-                            <div className="text-lg text-gray-800 font-medium mb-6 leading-relaxed" dangerouslySetInnerHTML={{ __html: currentQuestion?.name }} />
+                            <MathText className="text-lg text-gray-800 font-medium mb-6 leading-relaxed">
+                                {currentQuestion?.name}
+                            </MathText>
 
                             {currentQuestion?.image && (
                                 <div className="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100 text-center">
@@ -473,7 +483,9 @@ function QuizPage({ quizId, subjectId, onBack }) {
                                             `}>
                                                 {letters[idx]}
                                             </div>
-                                            <div className={`flex-1 text-base ${isSelected ? 'text-blue-900 font-medium' : 'text-gray-700'}`} dangerouslySetInnerHTML={{ __html: option.name }} />
+                                            <MathText className={`flex-1 text-base ${isSelected ? 'text-blue-900 font-medium' : 'text-gray-700'}`}>
+                                                {option.name}
+                                            </MathText>
 
                                             <div className={`
                                                 w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1
