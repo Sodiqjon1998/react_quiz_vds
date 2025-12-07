@@ -54,11 +54,16 @@ function QuizPage({ quizId, subjectId, onBack }) {
         }
     }, [quizId]);
 
+    // Faqat 5 sekundda bir marta saqlash
     useEffect(() => {
-        if (!loading && questions.length > 0) {
-            saveState();
-        }
-    }, [answers, markedForReview, currentQuestionIndex, timeLeft, loading, questions.length, saveState]);
+        const interval = setInterval(() => {
+            if (!loading && questions.length > 0) {
+                saveState();
+            }
+        }, 5000); // 5 sekund
+
+        return () => clearInterval(interval);
+    }, [answers, markedForReview, currentQuestionIndex, timeLeft]);
 
     useEffect(() => {
         if (timeLeft <= 0 || loading || questions.length === 0) return;
@@ -452,6 +457,7 @@ function QuizPage({ quizId, subjectId, onBack }) {
                                     <img
                                         src={currentQuestion.image}
                                         alt="Savol rasmi"
+                                        loading="lazy"
                                         className="max-h-[400px] max-w-full object-contain mx-auto rounded-lg shadow-sm"
                                         onError={(e) => {
                                             console.error('Rasm yuklanmadi:', currentQuestion.image);

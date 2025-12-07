@@ -1,33 +1,37 @@
 import React from 'react';
-import { 
-  Home, BookOpen, Mic, CheckSquare, 
-  FileText, User, LogOut, X, Menu 
+// XATOLIK SHU YERDA EDI: Swords va boshqa ikonalar import qilinmagan edi
+import {
+  Home, BookOpen, Mic, CheckSquare,
+  FileText, User, LogOut, X, Menu,
+  Swords, Trophy, Gamepad2 // <--- MANA SHULARNI QO'SHDIK
 } from 'lucide-react';
 
 function Sidebar({ currentPage, onNavigate, onLogout, isMobileMenuOpen, onCloseMobileMenu }) {
   const menuItems = [
     { id: 'dashboard', icon: Home, label: 'Bosh sahifa' },
-    // { id: 'darslar', icon: BookOpen, label: 'Darslar' },
-    // { id: 'topshiriqlar', icon: FileText, label: 'Topshiriqlar' },
     { id: 'kitobxonlik', icon: Mic, label: 'Kitobxonlik' },
     { id: 'vazifalar', icon: CheckSquare, label: 'Kunlik vazifalar' },
+
+    // --- YANGI O'YINLAR ---
+    { id: 'musobaqa', icon: Gamepad2, label: 'Bilimlar Janggi' },
+    { id: 'duel', icon: Swords, label: '1 vs 1 Duel' }, // <--- Swords shu yerda ishlatilyapti
+    // ----------------------
+
     { id: 'quiz', icon: FileText, label: 'Quiz' },
-    // { id: 'natijalar', icon: BarChart2, label: 'Natijalar' },
     { id: 'profil', icon: User, label: 'Profil' },
-    // { id: 'sozlamalar', icon: Settings, label: 'Sozlamalar' },
   ];
 
   return (
     <>
       {/* Mobile Overlay */}
       {isMobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 xl:hidden transition-opacity"
           onClick={onCloseMobileMenu}
         />
       )}
 
-      <aside 
+      <aside
         className={`
           fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-200 shadow-sm transition-transform duration-300 ease-in-out xl:translate-x-0 xl:static xl:h-screen
           ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -43,7 +47,7 @@ function Sidebar({ currentPage, onNavigate, onLogout, isMobileMenuOpen, onCloseM
           </a>
 
           {/* Close button (Mobile) */}
-          <button 
+          <button
             className="xl:hidden p-1 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
             onClick={onCloseMobileMenu}
           >
@@ -56,7 +60,7 @@ function Sidebar({ currentPage, onNavigate, onLogout, isMobileMenuOpen, onCloseM
           {menuItems.map((item) => {
             const isActive = currentPage === item.id;
             const Icon = item.icon;
-            
+
             return (
               <button
                 key={item.id}
@@ -68,14 +72,14 @@ function Sidebar({ currentPage, onNavigate, onLogout, isMobileMenuOpen, onCloseM
                 }}
                 className={`
                   w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200
-                  ${isActive 
-                    ? 'bg-orange-50 text-orange-600 shadow-sm' 
+                  ${isActive
+                    ? 'bg-orange-50 text-orange-600 shadow-sm'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}
                 `}
               >
                 <Icon className={`w-5 h-5 ${isActive ? 'text-orange-500' : 'text-gray-400'}`} />
                 <span className="truncate">{item.label}</span>
-                
+
                 {isActive && (
                   <div className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-500" />
                 )}
