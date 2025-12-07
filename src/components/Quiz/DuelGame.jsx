@@ -1,164 +1,455 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Swords, Trophy, Zap, User } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+    Swords, Trophy, Zap, Loader2, Search, Play, ArrowLeft, Users, User
+} from 'lucide-react';
 import Swal from 'sweetalert2';
+import Echo from 'laravel-echo';
+import Pusher from 'pusher-js';
 import MathText from './MathText';
+import { API_BASE_URL } from '../../config';
+
+// ---------------------------------------------------------
+// 1. ECHO VA PUSHER SOZLAMALARI
+// ---------------------------------------------------------
+window.Pusher = Pusher;
+
+// Agar .env faylingizda kalitlar bo'lsa, ularni import.meta.env dan oling.
+// Aks holda to'g'ridan-to'g'ri yozishingiz mumkin (faqat test uchun).
+
+// Tokenni olish
+const token = localStorage.getItem('token');
+const echo = new Echo({
+    broadcaster: 'pusher',
+    key: 'bd72b3eabbe0fb9d1258', // ⚠️ PUSHER APP KEYNI SHU YERGA YOZING
+    cluster: 'ap1',                // ⚠️ PUSHER CLUSTERNI SHU YERGA YOZING
+    forceTLS: true,
+
+    // ⚠️ MUHIM O'ZGARISH: Backendga to'g'ri yo'l ko'rsatamiz
+    authEndpoint: `${API_BASE_URL}/api/broadcasting/auth`,
+
+    // ⚠️ MUHIM: Tokenni headerda yuboramiz
+    auth: {
+        headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+        },
+    },
+});
 
 const DuelGame = ({ onExit }) => {
-    const [gameState, setGameState] = useState('intro'); // intro, playing, finished
+    // --- STATE ---
+    const [view, setView] = useState('list'); // 'list' | 'opponent' | 'game'
+    const [quizzes, setQuizzes] = useState([]);
+    const [classmates, setClassmates] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // O'yin ma'lumotlari
+    const [selectedQuiz, setSelectedQuiz] = useState(null);
+    const [opponent, setOpponent] = useState(null); // Tanlangan raqib
+    const [currentUser, setCurrentUser] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem('user'));
+        } catch (e) { return null; }
+    });
+
+    // ---------------------------------------------------------
+    // 2. REAL-TIME TINGLASH (LISTENER)
+    // ---------------------------------------------------------
+    useEffect(() => {
+        if (!currentUser) return;
+
+        console.log(`📡 Tinglanmoqda: user.${currentUser.id}`);
+        const channel = echo.private(`user.${currentUser.id}`);
+
+        // A) Meni kimdir duelga chaqirdi
+        channel.listen('DuelChallenge', (e) => {
+            console.log("📨 Chaqiruv keldi:", e);
+
+            // Ovozli signal (ixtiyoriy)
+            new Audio('/assets/audio/notification.mp3').play().catch(() => { });
+
+            Swal.fire({
+                title: '⚔️ Duelga chaqiruv!',
+                text: `${e.challenger.first_name} sizni "${e.quizId}-quiz" bo'yicha jangga chorlamoqda!`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Qabul qilish',
+                cancelButtonText: 'Rad etish',
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                allowOutsideClick: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    acceptChallenge(e.challenger, e.quizId, e.subjectId);
+                }
+            });
+        });
+
+        // B) Men chaqirgan raqib rozi bo'ldi
+        channel.listen('DuelAccepted', (e) => {
+            console.log("✅ Raqib qabul qildi:", e);
+            Swal.close(); // Loadingni yopish
+
+            Swal.fire({
+                title: 'Jang boshlandi!',
+                text: `${e.accepter.first_name} chaqiruvni qabul qildi. Tayyorlaning!`,
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            }).then(() => {
+                // O'yinni boshlaymiz (Raqib ma'lumotlarini o'rnatamiz)
+                setOpponent(e.accepter);
+                setView('game');
+            });
+        });
+
+        return () => {
+            echo.leave(`user.${currentUser.id}`);
+        };
+    }, [currentUser]);
+
+
+    // ---------------------------------------------------------
+    // 3. API FUNKSIYALARI (Chaqiruv yuborish/qabul qilish)
+    // ---------------------------------------------------------
+
+    // Chaqiruv yuborish
+    const sendChallenge = async (targetStudent) => {
+        if (!selectedQuiz) return;
+
+        try {
+            // Loading ko'rsatib turamiz
+            Swal.fire({
+                title: 'So\'rov yuborilmoqda...',
+                html: `<b>${targetStudent.name}</b> javob berishi kutilmoqda...<br>Iltimos kutib turing.`,
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            const token = localStorage.getItem('token');
+            const res = await fetch(`${API_BASE_URL}/api/quiz/duel/challenge`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    target_user_id: targetStudent.id,
+                    quiz_id: selectedQuiz.id,
+                    subject_id: selectedQuiz.subject.id
+                })
+            });
+
+            if (!res.ok) throw new Error("Tarmoq xatosi");
+
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Xatolik', 'So\'rov yuborishda xatolik bo\'ldi', 'error');
+        }
+    };
+
+    // Chaqiruvni qabul qilish
+    const acceptChallenge = async (challenger, quizId, subjectId) => {
+        try {
+            const token = localStorage.getItem('token');
+            await fetch(`${API_BASE_URL}/api/quiz/duel/accept`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ challenger_id: challenger.id })
+            });
+
+            // Bizda ham o'yin boshlanadi
+            // Quiz ma'lumotlarini to'g'irlab olamiz (API dan to'liq quiz info kelmagani uchun vaqtincha ID larni ishlatamiz)
+            setSelectedQuiz({ id: quizId, subject: { id: subjectId }, name: "Duel Quiz" });
+            setOpponent(challenger);
+            setView('game');
+
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Xatolik', 'O\'yinni boshlashda xatolik', 'error');
+        }
+    };
+
+
+    // ---------------------------------------------------------
+    // 4. DATA YUKLASH (Quizlar va Sinfdoshlar)
+    // ---------------------------------------------------------
+    useEffect(() => {
+        fetchQuizzes();
+    }, []);
+
+    const fetchQuizzes = async () => {
+        setLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_BASE_URL}/api/quiz/duel/list`, {
+                headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+            });
+            const data = await response.json();
+            if (data.success) setQuizzes(data.data);
+        } catch (err) { console.error(err); }
+        finally { setLoading(false); }
+    };
+
+    const fetchClassmates = async () => {
+        setLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_BASE_URL}/api/quiz/duel/classmates`, {
+                headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+            });
+            const data = await response.json();
+            if (data.success) setClassmates(data.data);
+        } catch (err) { console.error(err); }
+        finally { setLoading(false); }
+    };
+
+    // --- NAVIGATION ---
+    const selectQuiz = (quiz) => {
+        setSelectedQuiz(quiz);
+        fetchClassmates();
+        setView('opponent');
+    };
+
+    const handleSelectOpponent = (student) => {
+        // To'g'ridan-to'g'ri o'yin boshlanmaydi, chaqiruv ketadi
+        sendChallenge(student);
+    };
+
+    const goBack = () => {
+        if (view === 'game') {
+            if (confirm("O'yinni tark etasizmi?")) {
+                setView('opponent');
+                setOpponent(null);
+            }
+        }
+        else if (view === 'opponent') {
+            setView('list');
+            setSelectedQuiz(null);
+        }
+    };
+
+
+    // =========================================================
+    //  RENDER: 1. QUIZ LIST
+    // =========================================================
+    if (view === 'list') {
+        const filteredQuizzes = quizzes.filter(q => q.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+        return (
+            <div className="min-h-screen bg-gray-50 p-6">
+                <div className="max-w-7xl mx-auto">
+                    <div className="flex justify-between items-center mb-8">
+                        <div>
+                            <h1 className="text-3xl font-black text-gray-800 flex items-center gap-3">
+                                <Swords className="w-10 h-10 text-indigo-600" />
+                                Duel Arenasi
+                            </h1>
+                            <p className="text-gray-500">Jang qilish uchun mavzuni tanlang</p>
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Qidirish..."
+                            className="px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-indigo-500"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+
+                    {loading ? <Loader /> : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {filteredQuizzes.map(quiz => (
+                                <div key={quiz.id} onClick={() => selectQuiz(quiz)} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-lg hover:border-indigo-200 transition-all group">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold uppercase">{quiz.subject.name}</span>
+                                        <span className="text-xs text-gray-400 font-medium">{quiz.questions_count || 0} savol</span>
+                                    </div>
+                                    <h3 className="text-xl font-bold text-gray-800 mb-2 group-hover:text-indigo-600">{quiz.name}</h3>
+                                    <div className="flex items-center gap-2 text-gray-400 text-sm">
+                                        <Users className="w-4 h-4" />
+                                        <span>Sinf: {quiz.class}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    // =========================================================
+    //  RENDER: 2. OPPONENT SELECT
+    // =========================================================
+    if (view === 'opponent') {
+        return (
+            <div className="min-h-screen bg-gray-50 p-6 flex flex-col items-center">
+                <div className="w-full max-w-5xl">
+                    <button onClick={goBack} className="mb-6 flex items-center gap-2 text-gray-500 hover:text-gray-900 font-bold">
+                        <ArrowLeft className="w-5 h-5" /> Ortga qaytish
+                    </button>
+
+                    <h2 className="text-3xl font-black text-center text-gray-800 mb-2">Raqibni Tanlang</h2>
+                    <p className="text-center text-gray-500 mb-10">Kuningizni kim bilan sinamoqchisiz?</p>
+
+                    {loading ? <Loader /> : (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                            {classmates.length > 0 ? classmates.map(student => (
+                                <div
+                                    key={student.id}
+                                    onClick={() => handleSelectOpponent(student)}
+                                    className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:scale-105 hover:shadow-xl hover:border-indigo-300 transition-all text-center group"
+                                >
+                                    <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 overflow-hidden border-2 border-gray-100 group-hover:border-indigo-500 relative">
+                                        {student.avatar ? (
+                                            <img src={student.avatar} alt={student.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <User className="w-10 h-10 text-gray-400 m-auto mt-4" />
+                                        )}
+                                        {/* Online status indicator (mock) */}
+                                        <div className="absolute bottom-1 right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
+                                    </div>
+                                    <h4 className="font-bold text-gray-800 group-hover:text-indigo-600 truncate">{student.name}</h4>
+                                    <span className="text-xs text-green-500 font-bold">Online</span>
+                                </div>
+                            )) : (
+                                <div className="col-span-full text-center py-10 text-gray-400 bg-white rounded-xl border border-dashed">
+                                    <Users className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                                    Sinfdoshlar topilmadi
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    // =========================================================
+    //  RENDER: 3. GAME (ActiveGame)
+    // =========================================================
+    return (
+        <ActiveGame
+            quiz={selectedQuiz}
+            opponent={opponent}
+            currentUser={currentUser}
+            onBack={goBack}
+        />
+    );
+};
+
+// ---------------------------------------------------------
+// ACTIVE GAME COMPONENT
+// (Hozircha lokal, lekin raqib ma'lumotlari bilan)
+// ---------------------------------------------------------
+const ActiveGame = ({ quiz, opponent, currentUser, onBack }) => {
+    const [loading, setLoading] = useState(true);
+    const [questions, setQuestions] = useState([]);
     const [currentQIndex, setCurrentQIndex] = useState(0);
+    const [gameState, setGameState] = useState('intro'); // intro, playing, finished
 
-    // O'yinchilar holati
-    const [p1Score, setP1Score] = useState(0);
-    const [p2Score, setP2Score] = useState(0);
-    const [p1Status, setP1Status] = useState(null); // 'correct', 'wrong', 'waiting'
-    const [p2Status, setP2Status] = useState(null);
-    const [winner, setWinner] = useState(null);
+    // Scores
+    const [myScore, setMyScore] = useState(0);
+    const [opponentScore, setOpponentScore] = useState(0); // Real-time bo'lmasa 0 turadi
+    const [answerStatus, setAnswerStatus] = useState(null); // 'correct', 'wrong'
 
-    // NAMUNA SAVOLLAR (Bu yerni bazadan keladigan qilasiz)
-    const questions = [
-        {
-            id: 1,
-            question: "Eng tez yuguradigan hayvon?",
-            options: ["Sher", "Gepard", "Ot", "Quyon"],
-            correct: 1 // Index (0 dan boshlanadi, demak B javob)
-        },
-        {
-            id: 2,
-            question: "O'zbekiston poytaxti?",
-            options: ["Samarqand", "Buxoro", "Toshkent", "Xiva"],
-            correct: 2
-        },
-        {
-            id: 3,
-            question: "React bu ...?",
-            options: ["Kutubxona", "Framework", "Til", "Brauzer"],
-            correct: 0
-        },
-        {
-            id: 4,
-            question: "2 + 2 * 2 = ?",
-            options: ["8", "6", "4", "10"],
-            correct: 1
-        },
-        {
-            id: 5,
-            question: "Qaysi sayyora Qizil sayyora deb ataladi?",
-            options: ["Venera", "Mars", "Yupiter", "Saturn"],
-            correct: 1
-        }
-    ];
-
-    // Klaviatura boshqaruvi
-    const handleKeyDown = useCallback((event) => {
-        if (gameState !== 'playing' || p1Status || p2Status) return;
-
-        const key = event.key;
-        const currentQ = questions[currentQIndex];
-
-        // PLAYER 1 Controls (1, 2, 3, 4)
-        if (['1', '2', '3', '4'].includes(key)) {
-            const selectedIdx = parseInt(key) - 1;
-            checkAnswer(1, selectedIdx, currentQ.correct);
-        }
-
-        // PLAYER 2 Controls (7, 8, 9, 0)
-        if (['7', '8', '9', '0'].includes(key)) {
-            const selectedIdx = key === '0' ? 3 : parseInt(key) - 7;
-            checkAnswer(2, selectedIdx, currentQ.correct);
-        }
-    }, [gameState, currentQIndex, p1Status, p2Status]);
+    const correctSound = useRef(new Audio('/assets/audio/Water_Lily.mp3'));
 
     useEffect(() => {
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleKeyDown]);
+        const fetchGameData = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_BASE_URL}/api/quiz/${quiz.subject.id}/${quiz.id}/duel`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                const data = await response.json();
 
-    const checkAnswer = (player, selectedIdx, correctIdx) => {
-        if (selectedIdx === correctIdx) {
-            // TO'G'RI JAVOB
-            if (player === 1) {
-                setP1Status('correct');
-                setP1Score(prev => prev + 1);
-            } else {
-                setP2Status('correct');
-                setP2Score(prev => prev + 1);
-            }
+                if (data.success && data.data.questions?.length > 0) {
+                    const formatted = data.data.questions.map(q => ({
+                        id: q.id,
+                        question: q.question_text,
+                        options: q.options.map(opt => ({
+                            id: opt.id, text: opt.option_text, isCorrect: opt.is_correct
+                        }))
+                    }));
+                    setQuestions(formatted);
+                    setLoading(false);
+                }
+            } catch (e) { console.error(e); }
+        };
+        fetchGameData();
+    }, [quiz]);
 
-            // 1 soniyadan keyin keyingi savol
-            setTimeout(nextQuestion, 1500);
+    // O'yin mantiqi (Faqat men o'ynayman hozircha)
+    const handleAnswer = (option) => {
+        if (answerStatus) return;
+
+        if (option.isCorrect) {
+            correctSound.current.currentTime = 0;
+            correctSound.current.play().catch(() => { });
+            setMyScore(s => s + 10);
+            setAnswerStatus('correct');
         } else {
-            // XATO JAVOB
-            if (player === 1) {
-                setP1Status('wrong');
-                // Jarima (ixtiyoriy)
-                // setP1Score(prev => Math.max(0, prev - 1)); 
+            setAnswerStatus('wrong');
+        }
+
+        // Keyingi savolga o'tish
+        setTimeout(() => {
+            if (currentQIndex < questions.length - 1) {
+                setCurrentQIndex(prev => prev + 1);
+                setAnswerStatus(null);
             } else {
-                setP2Status('wrong');
+                setGameState('finished');
             }
-            // Xato qilganda o'yin to'xtamaydi, narigi o'yinchi javob berishi mumkin
-            // Yoki darhol keyingi savolga o'tish mumkin:
-            setTimeout(nextQuestion, 1000);
-        }
+        }, 1000);
     };
 
-    const nextQuestion = () => {
-        if (currentQIndex < questions.length - 1) {
-            setCurrentQIndex(prev => prev + 1);
-            setP1Status(null);
-            setP2Status(null);
-        } else {
-            finishGame();
-        }
-    };
+    if (loading) return <Loader />;
 
-    const finishGame = () => {
-        setGameState('finished');
-        if (p1Score > p2Score) setWinner(1);
-        else if (p2Score > p1Score) setWinner(2);
-        else setWinner('draw');
-    };
-
-    // --- RENDER QISMI ---
-
+    // INTRO SCREEN
     if (gameState === 'intro') {
         return (
-            <div className="min-h-[80vh] flex items-center justify-center bg-gray-900 p-4">
-                <div className="max-w-4xl w-full bg-gray-800 rounded-3xl p-10 text-center shadow-2xl border border-gray-700 animate__animated animate__zoomIn">
-                    <div className="flex justify-center mb-6">
-                        <div className="relative">
-                            <Swords className="w-24 h-24 text-red-500 animate-pulse" />
-                            <div className="absolute inset-0 bg-red-500 blur-xl opacity-30"></div>
+            <div className="h-screen flex items-center justify-center bg-gray-900 text-white p-4">
+                <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-3 gap-8 items-center animate-in zoom-in duration-500">
+                    {/* ME */}
+                    <div className="text-center">
+                        <div className="w-32 h-32 mx-auto bg-blue-600 rounded-full mb-4 flex items-center justify-center border-4 border-white/20 shadow-2xl">
+                            {currentUser?.img ?
+                                <img src={currentUser.img} className="w-full h-full rounded-full object-cover" /> :
+                                <span className="text-4xl font-black">MEN</span>
+                            }
                         </div>
+                        <h3 className="text-xl font-bold">{currentUser?.first_name || 'Siz'}</h3>
                     </div>
 
-                    <h1 className="text-5xl font-black text-white mb-2 tracking-tight">DUEL REJIMI</h1>
-                    <p className="text-gray-400 text-xl mb-10">Kim kuchliroq? Bilimlar jangida aniqlang!</p>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-                        <div className="bg-blue-900/30 p-6 rounded-2xl border border-blue-500/30">
-                            <h3 className="text-blue-400 font-bold text-lg mb-2">🔵 1-O'yinchi (Chap)</h3>
-                            <div className="flex justify-center gap-2">
-                                {['1', '2', '3', '4'].map(k => (
-                                    <span key={k} className="w-10 h-10 rounded-lg bg-gray-700 text-white flex items-center justify-center font-mono font-bold border-b-4 border-gray-900">{k}</span>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="bg-red-900/30 p-6 rounded-2xl border border-red-500/30">
-                            <h3 className="text-red-400 font-bold text-lg mb-2">🔴 2-O'yinchi (O'ng)</h3>
-                            <div className="flex justify-center gap-2">
-                                {['7', '8', '9', '0'].map(k => (
-                                    <span key={k} className="w-10 h-10 rounded-lg bg-gray-700 text-white flex items-center justify-center font-mono font-bold border-b-4 border-gray-900">{k}</span>
-                                ))}
-                            </div>
-                        </div>
+                    {/* VS */}
+                    <div className="text-center">
+                        <Swords className="w-24 h-24 text-red-500 mx-auto animate-pulse" />
+                        <h1 className="text-6xl font-black italic mt-4 text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-yellow-500">VS</h1>
+                        <button onClick={() => setGameState('playing')} className="mt-8 px-10 py-3 bg-white text-gray-900 rounded-full font-black text-xl hover:scale-110 transition-transform shadow-lg shadow-white/20">
+                            BOSHLASH
+                        </button>
                     </div>
 
-                    <button
-                        onClick={() => setGameState('playing')}
-                        className="px-12 py-4 bg-gradient-to-r from-red-600 to-orange-600 text-white text-xl font-bold rounded-xl hover:scale-105 transition-transform shadow-lg shadow-red-900/50"
-                    >
-                        JANGNI BOSHLASH ⚔️
-                    </button>
+                    {/* OPPONENT */}
+                    <div className="text-center">
+                        <div className="w-32 h-32 mx-auto bg-red-600 rounded-full mb-4 overflow-hidden border-4 border-white/20 shadow-2xl">
+                            {opponent?.avatar ? (
+                                <img src={opponent.avatar} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                                <span className="flex items-center justify-center h-full text-4xl font-black">{opponent?.short_name?.[0]}</span>
+                            )}
+                        </div>
+                        <h3 className="text-xl font-bold">{opponent?.name || opponent?.short_name}</h3>
+                    </div>
                 </div>
             </div>
         );
@@ -166,39 +457,14 @@ const DuelGame = ({ onExit }) => {
 
     if (gameState === 'finished') {
         return (
-            <div className="min-h-[80vh] flex items-center justify-center bg-gray-900 p-4">
-                <div className="bg-gray-800 rounded-3xl p-10 text-center max-w-2xl w-full border border-gray-700">
-                    <Trophy className="w-20 h-20 text-yellow-400 mx-auto mb-6 animate-bounce" />
-
-                    <h2 className="text-4xl font-bold text-white mb-2">O'yin Yakunlandi!</h2>
-
-                    <div className="text-2xl font-bold mb-8 text-gray-300">
-                        {winner === 'draw' ?
-                            "Do'stlik g'alaba qozondi! 🤝" :
-                            <span className={winner === 1 ? "text-blue-400" : "text-red-400"}>
-                                {winner === 1 ? "1-O'yinchi" : "2-O'yinchi"} G'olib! 🏆
-                            </span>
-                        }
+            <div className="h-screen flex items-center justify-center bg-gray-900 text-white text-center">
+                <div className="bg-gray-800 p-12 rounded-3xl border border-gray-700 shadow-2xl animate-in fade-in-up">
+                    <Trophy className="w-24 h-24 text-yellow-400 mx-auto mb-6 animate-bounce" />
+                    <h2 className="text-4xl font-black mb-4">O'yin Yakunlandi!</h2>
+                    <div className="text-2xl text-gray-400 mb-8">
+                        Sizning natijangiz: <span className="text-white font-bold">{myScore}</span> ball
                     </div>
-
-                    <div className="flex justify-center gap-10 mb-10">
-                        <div className="text-center">
-                            <div className="text-blue-400 font-bold mb-1">Player 1</div>
-                            <div className="text-5xl font-black text-white">{p1Score}</div>
-                        </div>
-                        <div className="text-center">
-                            <div className="text-gray-600 font-bold text-4xl pt-2">:</div>
-                        </div>
-                        <div className="text-center">
-                            <div className="text-red-400 font-bold mb-1">Player 2</div>
-                            <div className="text-5xl font-black text-white">{p2Score}</div>
-                        </div>
-                    </div>
-
-                    <button
-                        onClick={onExit}
-                        className="px-8 py-3 bg-gray-700 text-white rounded-xl font-bold hover:bg-gray-600"
-                    >
+                    <button onClick={onBack} className="bg-gray-700 px-8 py-3 rounded-xl font-bold hover:bg-gray-600 transition-colors">
                         Chiqish
                     </button>
                 </div>
@@ -206,103 +472,72 @@ const DuelGame = ({ onExit }) => {
         );
     }
 
-    // O'YIN JARAYONI EKRANI
+    // GAMEPLAY
     const currentQ = questions[currentQIndex];
-
     return (
-        <div className="h-[calc(100vh-200px)] flex flex-col bg-gray-900 overflow-hidden rounded-3xl border border-gray-800 shadow-2xl relative">
-
-            {/* Savol Qismi (O'rtada) */}
-            <div className="absolute top-0 left-0 w-full p-6 z-10 flex flex-col items-center">
-                <div className="bg-gray-800/90 backdrop-blur px-8 py-4 rounded-2xl border border-gray-700 shadow-xl max-w-3xl w-full text-center">
-                    <span className="text-gray-500 text-sm font-bold uppercase tracking-widest mb-1 block">Savol {currentQIndex + 1}</span>
-                    <MathText className="text-2xl md:text-3xl font-bold text-white">
-                        {currentQ.question}
-                    </MathText>
+        <div className="h-screen flex flex-col bg-gray-900 overflow-hidden relative select-none">
+            {/* Header Info */}
+            <div className="bg-gray-800 p-4 flex justify-between items-center px-8 border-b border-gray-700">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center font-bold text-white">S</div>
+                    <div>
+                        <div className="text-xs text-gray-400">Siz</div>
+                        <div className="font-bold text-white text-xl">{myScore}</div>
+                    </div>
+                </div>
+                <div className="text-gray-500 font-mono font-bold">
+                    {currentQIndex + 1} / {questions.length}
+                </div>
+                <div className="flex items-center gap-3 text-right">
+                    <div>
+                        <div className="text-xs text-gray-400">{opponent?.short_name || 'Raqib'}</div>
+                        <div className="font-bold text-white text-xl">{opponentScore}</div>
+                    </div>
+                    <div className="w-10 h-10 rounded-full bg-red-500 overflow-hidden">
+                        {opponent?.avatar && <img src={opponent.avatar} className="w-full h-full object-cover" />}
+                    </div>
                 </div>
             </div>
 
-            {/* SPLIT SCREEN */}
-            <div className="flex-1 flex w-full relative">
-
-                {/* --- PLAYER 1 (CHAP) --- */}
-                <div className={`flex-1 relative flex flex-col justify-end p-6 border-r border-gray-800 transition-colors duration-300 ${p1Status === 'correct' ? 'bg-green-900/40' : p1Status === 'wrong' ? 'bg-red-900/40' : 'bg-blue-900/10'}`}>
-
-                    {/* Score */}
-                    <div className="absolute top-24 left-6">
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xl border-2 border-blue-400">P1</div>
-                            <span className="text-5xl font-black text-white/20">{p1Score}</span>
-                        </div>
-                    </div>
-
-                    {/* Options P1 */}
-                    <div className="space-y-3 mb-10 max-w-md mx-auto w-full">
-                        {currentQ.options.map((opt, idx) => (
-                            <div key={idx} className={`
-                                p-4 rounded-xl border-2 flex items-center gap-4 transition-all
-                                ${p1Status === 'correct' && idx === currentQ.correct ? 'bg-green-600 border-green-500 text-white scale-105' :
-                                    'bg-gray-800 border-gray-700 text-gray-300'}
-                            `}>
-                                <span className="w-8 h-8 rounded bg-gray-700 flex items-center justify-center font-bold text-sm text-gray-400 border border-gray-600">
-                                    {idx + 1}
-                                </span>
-                                <span className="font-bold">{opt}</span>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Feedback */}
-                    {p1Status && (
-                        <div className="absolute inset-0 flex items-center justify-center z-20 bg-black/20 backdrop-blur-sm">
-                            {p1Status === 'correct' ?
-                                <Zap className="w-24 h-24 text-green-400 animate-bounce" /> :
-                                <span className="text-6xl">❌</span>
-                            }
-                        </div>
-                    )}
+            {/* Question Area */}
+            <div className="flex-1 flex flex-col justify-center items-center p-6 max-w-4xl mx-auto w-full">
+                <div className="w-full text-center mb-10">
+                    <MathText className="text-3xl md:text-4xl font-bold text-white leading-tight">
+                        {currentQ.question}
+                    </MathText>
                 </div>
 
-                {/* --- PLAYER 2 (O'NG) --- */}
-                <div className={`flex-1 relative flex flex-col justify-end p-6 transition-colors duration-300 ${p2Status === 'correct' ? 'bg-green-900/40' : p2Status === 'wrong' ? 'bg-red-900/40' : 'bg-red-900/10'}`}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                    {currentQ.options.map((opt, idx) => {
+                        let btnClass = "bg-gray-800 border-2 border-gray-700 hover:border-gray-500 hover:bg-gray-750";
+                        if (answerStatus) {
+                            if (opt.isCorrect) btnClass = "bg-green-600 border-green-500";
+                            else btnClass = "bg-gray-800 border-gray-700 opacity-50";
+                        }
 
-                    {/* Score */}
-                    <div className="absolute top-24 right-6">
-                        <div className="flex items-center gap-3 flex-row-reverse">
-                            <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center text-white font-bold text-xl border-2 border-red-400">P2</div>
-                            <span className="text-5xl font-black text-white/20">{p2Score}</span>
-                        </div>
-                    </div>
-
-                    {/* Options P2 */}
-                    <div className="space-y-3 mb-10 max-w-md mx-auto w-full">
-                        {currentQ.options.map((opt, idx) => (
-                            <div key={idx} className={`
-                                p-4 rounded-xl border-2 flex items-center justify-end gap-4 transition-all text-right
-                                ${p2Status === 'correct' && idx === currentQ.correct ? 'bg-green-600 border-green-500 text-white scale-105' :
-                                    'bg-gray-800 border-gray-700 text-gray-300'}
-                            `}>
-                                <span className="font-bold">{opt}</span>
-                                <span className="w-8 h-8 rounded bg-gray-700 flex items-center justify-center font-bold text-sm text-gray-400 border border-gray-600">
-                                    {idx === 3 ? '0' : idx + 7}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Feedback */}
-                    {p2Status && (
-                        <div className="absolute inset-0 flex items-center justify-center z-20 bg-black/20 backdrop-blur-sm">
-                            {p2Status === 'correct' ?
-                                <Zap className="w-24 h-24 text-green-400 animate-bounce" /> :
-                                <span className="text-6xl">❌</span>
-                            }
-                        </div>
-                    )}
+                        return (
+                            <button
+                                key={idx}
+                                onClick={() => handleAnswer(opt)}
+                                disabled={!!answerStatus}
+                                className={`p-6 rounded-xl text-left transition-all text-white font-medium text-lg flex items-center gap-4 ${btnClass}`}
+                            >
+                                <span className="w-8 h-8 rounded bg-gray-700/50 flex items-center justify-center text-sm font-bold">{idx + 1}</span>
+                                <MathText>{opt.text}</MathText>
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
         </div>
     );
 };
+
+// Helper Loader
+const Loader = () => (
+    <div className="flex justify-center items-center h-64 text-indigo-500">
+        <Loader2 className="w-10 h-10 animate-spin" />
+    </div>
+);
 
 export default DuelGame;

@@ -5,19 +5,18 @@ import Dashboard from '../dashboard/Dashboard';
 import Darslar from '../pages/Darslar';
 import Topshiriqlar from '../pages/Topshiriqlar';
 import QuizPage from '../quiz/QuizPage';
-// YANGI: GameQuiz ni import qilamiz (fayl manzili to'g'ri ekanligiga ishonch hosil qiling)
-import GameQuiz from '../quiz/GameQuiz';
+import DuelGame from '../quiz/DuelGame';
 import Kitobxonlik from '../pages/Kitobxonlik';
 import KunlikVazifalar from '../pages/KunlikVazifalar';
 import Profile from '../pages/Profile';
-import DuelGame from '../quiz/DuelGame';
 
 function Layout({ user, onLogout }) {
     const [currentPage, setCurrentPage] = useState('dashboard');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    // Quiz parametrlari (Faqat oddiy QuizPage uchun kerak bo'ladi)
     const [quizParams, setQuizParams] = useState(null);
 
-    // Body class boshqarish (menu ochiq/yopiq)
     useEffect(() => {
         if (isMobileMenuOpen) {
             document.body.classList.add('layout-menu-expanded');
@@ -26,11 +25,9 @@ function Layout({ user, onLogout }) {
         }
     }, [isMobileMenuOpen]);
 
-    // URL hash orqali navigatsiya
     useEffect(() => {
         const handleHashChange = () => {
-            const hash = window.location.hash.slice(1); // "#" ni olib tashlash
-            console.log('Current hash:', hash);
+            const hash = window.location.hash.slice(1);
 
             if (hash.startsWith('quiz/')) {
                 const parts = hash.split('/');
@@ -39,6 +36,8 @@ function Layout({ user, onLogout }) {
                     setQuizParams({ subjectId, quizId });
                     setCurrentPage('quiz');
                 }
+            } else if (hash === 'duel') {
+                setCurrentPage('duel');
             } else if (hash) {
                 setCurrentPage(hash);
             } else {
@@ -48,13 +47,10 @@ function Layout({ user, onLogout }) {
 
         handleHashChange();
         window.addEventListener('hashchange', handleHashChange);
-
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, []);
 
-    const toggleMobileMenu = () => {
-        setIsMobileMenuOpen(!isMobileMenuOpen);
-    };
+    const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
 
     const handleNavigate = (page) => {
         window.location.hash = page;
@@ -69,19 +65,16 @@ function Layout({ user, onLogout }) {
         switch (currentPage) {
             case 'dashboard':
                 return <Dashboard user={user} />;
-            case 'darslar':
-                return <Darslar />;
-            case 'topshiriqlar':
-                return <Topshiriqlar />;
             case 'kitobxonlik':
                 return <Kitobxonlik />;
             case 'vazifalar':
                 return <KunlikVazifalar />;
 
-            case 'musobaqa': // Sidebar'dagi ID bilan bir xil bo'lishi kerak
-                return <GameQuiz onExit={() => handleNavigate('dashboard')} />;
+            // --- O'ZGARGAN QISM ---
             case 'duel':
+                // Tekshiruv yo'q, darhol DuelGame ochiladi
                 return <DuelGame onExit={() => handleNavigate('dashboard')} />;
+            // ----------------------
 
             case 'quiz':
                 return quizParams ? (
@@ -90,9 +83,8 @@ function Layout({ user, onLogout }) {
                         subjectId={quizParams.subjectId}
                         onBack={handleQuizBack}
                     />
-                ) : (
-                    <Dashboard user={user} />
-                );
+                ) : <Dashboard user={user} />;
+
             case 'profil':
                 return <Profile />;
             default:
@@ -102,7 +94,6 @@ function Layout({ user, onLogout }) {
 
     return (
         <>
-            {/* Sidebar */}
             <Sidebar
                 currentPage={currentPage}
                 onNavigate={handleNavigate}
@@ -111,35 +102,23 @@ function Layout({ user, onLogout }) {
                 onCloseMobileMenu={() => setIsMobileMenuOpen(false)}
             />
 
-            {/* Layout Overlay - menu ochiq bo'lsa ko'rinadi */}
-            <div
-                className={`layout-overlay ${isMobileMenuOpen ? 'layout-overlay-active' : ''}`}
-                onClick={() => setIsMobileMenuOpen(false)}
-            ></div>
+            <div className={`layout-overlay ${isMobileMenuOpen ? 'layout-overlay-active' : ''}`} onClick={() => setIsMobileMenuOpen(false)}></div>
 
-            {/* Main Content */}
             <div className="layout-page">
-                <Navbar
-                    user={user}
-                    onLogout={onLogout}
-                    onToggleMobileMenu={toggleMobileMenu}
-                />
-
+                <Navbar user={user} onLogout={onLogout} onToggleMobileMenu={toggleMobileMenu} />
                 <div className="content-wrapper">
                     <div className="container-xxl flex-grow-1 container-p-y">
                         {renderPage()}
                     </div>
-
                     <footer className="content-footer footer bg-footer-theme">
                         <div className="container-xxl">
                             <div className="footer-container d-flex align-items-center justify-content-between py-4 flex-md-row flex-column">
                                 <div className="mb-2 mb-md-0">
-                                    © 2024, made with ❤️ by <strong>Andijon Yuksalish Maktabi</strong>
+                                    © 2024, <strong>Andijon Yuksalish Maktabi</strong>
                                 </div>
                             </div>
                         </div>
                     </footer>
-
                     <div className="content-backdrop fade"></div>
                 </div>
             </div>

@@ -2,11 +2,6 @@ import { useState, useEffect } from 'react';
 import { BookOpen, Calendar, Clock, Target, CheckCircle, XCircle, AlertCircle, Lock, Play, RefreshCw, TrendingUp } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
 
-
-// ==========================================
-// ⚙️ SOZLAMALAR (CONFIG)
-// ==========================================
-
 function Dashboard({ user = { first_name: 'Jasur', last_name: 'Aliyev' } }) {
     const [quizzes, setQuizzes] = useState([]);
     const [statistics, setStatistics] = useState(null);
@@ -23,7 +18,6 @@ function Dashboard({ user = { first_name: 'Jasur', last_name: 'Aliyev' } }) {
             setError(null);
             const token = localStorage.getItem('token');
 
-            // API_BASE_URL dan foydalanish
             const response = await fetch(`${API_BASE_URL}/api/quiz`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -102,7 +96,6 @@ function Dashboard({ user = { first_name: 'Jasur', last_name: 'Aliyev' } }) {
     return (
         <div className="min-h-screen bg-gray-50 p-4 lg:p-6">
             <div className="max-w-7xl mx-auto">
-                {/* Welcome Section */}
                 <div className="bg-white rounded-2xl p-6 shadow-sm mb-6 border-l-4 border-orange-500">
                     <div className="flex items-center gap-4">
                         <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
@@ -117,7 +110,6 @@ function Dashboard({ user = { first_name: 'Jasur', last_name: 'Aliyev' } }) {
                     </div>
                 </div>
 
-                {/* Statistics Cards */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                     <div className="bg-white rounded-xl p-5 shadow-sm border-l-4 border-orange-500">
                         <div className="flex items-center gap-3 mb-3">
@@ -128,7 +120,7 @@ function Dashboard({ user = { first_name: 'Jasur', last_name: 'Aliyev' } }) {
                         <h2 className="text-3xl font-bold text-orange-500 mb-1">{statistics?.total || 0}</h2>
                         <p className="text-gray-600 text-sm font-medium">Jami Quizlar</p>
                     </div>
-
+                    {/* ... Boshqa statistikalar ... */}
                     <div className="bg-white rounded-xl p-5 shadow-sm border-l-4 border-green-500">
                         <div className="flex items-center gap-3 mb-3">
                             <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
@@ -138,19 +130,15 @@ function Dashboard({ user = { first_name: 'Jasur', last_name: 'Aliyev' } }) {
                         <h2 className="text-3xl font-bold text-green-500 mb-1">{statistics?.completed || 0}</h2>
                         <p className="text-gray-600 text-sm font-medium">Topshirilgan</p>
                     </div>
-
                     <div className="bg-white rounded-xl p-5 shadow-sm border-l-4 border-yellow-500">
                         <div className="flex items-center gap-3 mb-3">
                             <div className="w-12 h-12 rounded-lg bg-yellow-100 flex items-center justify-center">
                                 <Clock className="w-6 h-6 text-yellow-500" />
                             </div>
                         </div>
-                        <h2 className="text-3xl font-bold text-yellow-500 mb-1">
-                            {(statistics?.total || 0) - (statistics?.completed || 0)}
-                        </h2>
+                        <h2 className="text-3xl font-bold text-yellow-500 mb-1">{(statistics?.total || 0) - (statistics?.completed || 0)}</h2>
                         <p className="text-gray-600 text-sm font-medium">Kutilmoqda</p>
                     </div>
-
                     <div className="bg-white rounded-xl p-5 shadow-sm border-t-4 border-orange-500">
                         <div className="flex items-center gap-3 mb-3">
                             <div className="w-12 h-12 rounded-lg bg-orange-100 flex items-center justify-center">
@@ -164,7 +152,6 @@ function Dashboard({ user = { first_name: 'Jasur', last_name: 'Aliyev' } }) {
                     </div>
                 </div>
 
-                {/* Quizzes Section */}
                 <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                     <div className="bg-white border-t-4 border-orange-500 p-5 flex justify-between items-center flex-wrap gap-4 shadow-sm">
                         <h5 className="text-gray-900 font-bold text-lg lg:text-xl flex items-center gap-3">
@@ -187,11 +174,9 @@ function Dashboard({ user = { first_name: 'Jasur', last_name: 'Aliyev' } }) {
                             <div className="text-center py-16">
                                 <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                                 <h5 className="text-gray-400 font-semibold text-lg">Hozircha quizlar mavjud emas</h5>
-                                <p className="text-gray-400 text-sm mt-2">Yangi quizlar qo'shilganida bu yerda ko'rinadi</p>
                             </div>
                         ) : (
                             <>
-                                {/* Desktop Table */}
                                 <div className="hidden lg:block overflow-x-auto">
                                     <table className="w-full">
                                         <thead className="bg-gray-50 border-b-2 border-gray-200">
@@ -199,9 +184,7 @@ function Dashboard({ user = { first_name: 'Jasur', last_name: 'Aliyev' } }) {
                                                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Quiz nomi</th>
                                                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Fan</th>
                                                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Sinf</th>
-                                                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Sana</th>
                                                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Vaqt</th>
-                                                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Urinishlar</th>
                                                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
                                                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Amal</th>
                                             </tr>
@@ -226,41 +209,18 @@ function Dashboard({ user = { first_name: 'Jasur', last_name: 'Aliyev' } }) {
                                                         </td>
                                                         <td className="px-4 py-4 text-gray-600 font-medium">{quiz.class}</td>
                                                         <td className="px-4 py-4 text-gray-600">
-                                                            <div className="flex items-center gap-2">
-                                                                <Calendar className="w-4 h-4 text-gray-400" />
-                                                                {quiz.attachment ? quiz.attachment.date : '-'}
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-4 py-4 text-gray-600">
-                                                            <div className="flex items-center gap-2">
-                                                                <Clock className="w-4 h-4 text-gray-400" />
-                                                                {quiz.attachment ? quiz.attachment.time : '-'}
-                                                            </div>
+                                                            {quiz.attachment ? quiz.attachment.time : '-'}
                                                         </td>
                                                         <td className="px-4 py-4">
-                                                            <span className={`px-3 py-1 rounded-lg font-bold text-sm ${quiz.attempts.used >= quiz.attempts.total
-                                                                ? 'bg-red-100 text-red-700'
-                                                                : 'bg-orange-100 text-orange-700'
-                                                                }`}>
-                                                                {quiz.attempts.used}/{quiz.attempts.total}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-4 py-4">
-                                                            <span
-                                                                className="px-3 py-1 rounded-lg text-white text-sm font-medium flex items-center gap-2 w-fit"
-                                                                style={{ backgroundColor: status.bgColor }}
-                                                            >
-                                                                {status.icon}
-                                                                {status.text}
+                                                            <span className="px-3 py-1 rounded-lg text-white text-sm font-medium flex items-center gap-2 w-fit" style={{ backgroundColor: status.bgColor }}>
+                                                                {status.icon} {status.text}
                                                             </span>
                                                         </td>
                                                         <td className="px-4 py-4">
                                                             <button
                                                                 disabled={!status.canStart}
                                                                 onClick={() => {
-                                                                    if (status.canStart) {
-                                                                        window.location.href = `#quiz/${quiz.subject.id}/${quiz.id}`;
-                                                                    }
+                                                                    if (status.canStart) window.location.href = `#quiz/${quiz.subject.id}/${quiz.id}`;
                                                                 }}
                                                                 className={`px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 transition-colors ${status.canStart
                                                                     ? 'bg-green-500 text-white hover:bg-green-600'
@@ -278,15 +238,11 @@ function Dashboard({ user = { first_name: 'Jasur', last_name: 'Aliyev' } }) {
                                     </table>
                                 </div>
 
-                                {/* Mobile Cards */}
                                 <div className="lg:hidden space-y-4">
                                     {quizzes.map(quiz => {
                                         const status = getQuizStatus(quiz);
                                         return (
-                                            <div
-                                                key={quiz.id}
-                                                className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
-                                            >
+                                            <div key={quiz.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
                                                 <div className="flex items-center gap-3 mb-4">
                                                     <div className="w-12 h-12 rounded-lg bg-orange-500 flex items-center justify-center flex-shrink-0">
                                                         <BookOpen className="w-6 h-6 text-white" />
@@ -296,66 +252,18 @@ function Dashboard({ user = { first_name: 'Jasur', last_name: 'Aliyev' } }) {
                                                         <p className="text-sm text-gray-600">{quiz.class}</p>
                                                     </div>
                                                 </div>
-
                                                 <div className="bg-gray-50 rounded-lg p-3 space-y-3 mb-4">
                                                     <div className="flex justify-between items-center">
-                                                        <span className="text-sm text-gray-600 font-medium">Fan:</span>
-                                                        <span className="px-3 py-1 rounded-lg bg-cyan-100 text-cyan-700 text-xs font-medium">
-                                                            {quiz.subject.name}
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-sm text-gray-600 font-medium flex items-center gap-2">
-                                                            <Calendar className="w-4 h-4" />
-                                                            Sana:
-                                                        </span>
-                                                        <span className="text-sm text-gray-900 font-semibold">
-                                                            {quiz.attachment ? quiz.attachment.date : '-'}
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-sm text-gray-600 font-medium flex items-center gap-2">
-                                                            <Clock className="w-4 h-4" />
-                                                            Vaqt:
-                                                        </span>
-                                                        <span className="text-sm text-gray-900 font-semibold">
-                                                            {quiz.attachment ? quiz.attachment.time : '-'}
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-sm text-gray-600 font-medium flex items-center gap-2">
-                                                            <Target className="w-4 h-4" />
-                                                            Urinishlar:
-                                                        </span>
-                                                        <span className={`px-3 py-1 rounded-lg font-bold text-sm ${quiz.attempts.used >= quiz.attempts.total
-                                                            ? 'bg-red-100 text-red-700'
-                                                            : 'bg-orange-100 text-orange-700'
-                                                            }`}>
-                                                            {quiz.attempts.used}/{quiz.attempts.total}
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="flex justify-between items-center">
                                                         <span className="text-sm text-gray-600 font-medium">Status:</span>
-                                                        <span
-                                                            className="px-3 py-1 rounded-lg text-white text-xs font-medium flex items-center gap-2"
-                                                            style={{ backgroundColor: status.bgColor }}
-                                                        >
-                                                            {status.icon}
-                                                            {status.text}
+                                                        <span className="px-3 py-1 rounded-lg text-white text-xs font-medium flex items-center gap-2" style={{ backgroundColor: status.bgColor }}>
+                                                            {status.icon} {status.text}
                                                         </span>
                                                     </div>
                                                 </div>
-
                                                 <button
                                                     disabled={!status.canStart}
                                                     onClick={() => {
-                                                        if (status.canStart) {
-                                                            window.location.href = `#quiz/${quiz.subject.id}/${quiz.id}`;
-                                                        }
+                                                        if (status.canStart) window.location.href = `#quiz/${quiz.subject.id}/${quiz.id}`;
                                                     }}
                                                     className={`w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors ${status.canStart
                                                         ? 'bg-green-500 text-white hover:bg-green-600'
