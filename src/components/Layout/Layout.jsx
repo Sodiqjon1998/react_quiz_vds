@@ -104,7 +104,7 @@ function Layout({ user, onLogout }) {
 
             <div className={`layout-overlay ${isMobileMenuOpen ? 'layout-overlay-active' : ''}`} onClick={() => setIsMobileMenuOpen(false)}></div>
 
-            <div className="layout-page">
+            <div className="layout-page xl:ml-64">
                 <Navbar user={user} onLogout={onLogout} onToggleMobileMenu={toggleMobileMenu} />
                 <div className="content-wrapper">
                     <div className="container-xxl flex-grow-1 container-p-y">

@@ -1,9 +1,8 @@
 import React from 'react';
-// XATOLIK SHU YERDA EDI: Swords va boshqa ikonalar import qilinmagan edi
 import {
   Home, BookOpen, Mic, CheckSquare,
   FileText, User, LogOut, X, Menu,
-  Swords, Trophy, Gamepad2 // <--- MANA SHULARNI QO'SHDIK
+  Swords, Trophy, Gamepad2
 } from 'lucide-react';
 
 function Sidebar({ currentPage, onNavigate, onLogout, isMobileMenuOpen, onCloseMobileMenu }) {
@@ -11,12 +10,8 @@ function Sidebar({ currentPage, onNavigate, onLogout, isMobileMenuOpen, onCloseM
     { id: 'dashboard', icon: Home, label: 'Bosh sahifa' },
     { id: 'kitobxonlik', icon: Mic, label: 'Kitobxonlik' },
     { id: 'vazifalar', icon: CheckSquare, label: 'Kunlik vazifalar' },
-
-    // --- YANGI O'YINLAR ---
     { id: 'musobaqa', icon: Gamepad2, label: 'Bilimlar Janggi' },
-    { id: 'duel', icon: Swords, label: '1 vs 1 Duel' }, // <--- Swords shu yerda ishlatilyapti
-    // ----------------------
-
+    { id: 'duel', icon: Swords, label: '1 vs 1 Duel' },
     { id: 'quiz', icon: FileText, label: 'Quiz' },
     { id: 'profil', icon: User, label: 'Profil' },
   ];
@@ -33,7 +28,11 @@ function Sidebar({ currentPage, onNavigate, onLogout, isMobileMenuOpen, onCloseM
 
       <aside
         className={`
-          fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-200 shadow-sm transition-transform duration-300 ease-in-out xl:translate-x-0 xl:static xl:h-screen
+          fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-200 shadow-sm transition-transform duration-300 ease-in-out
+          
+          /* ⚠️ O'ZGARISH SHU YERDA: xl:static ni O'CHIRIB, xl:fixed QILDIK */
+          xl:translate-x-0 xl:fixed xl:h-screen
+          
           ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
@@ -87,10 +86,8 @@ function Sidebar({ currentPage, onNavigate, onLogout, isMobileMenuOpen, onCloseM
             );
           })}
 
-          {/* Divider */}
           <div className="my-4 border-t border-gray-100" />
 
-          {/* Logout */}
           <button
             onClick={onLogout}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 transition-all duration-200 group mt-auto"
