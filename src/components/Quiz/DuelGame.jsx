@@ -192,51 +192,73 @@ const DuelGame = ({ onExit }) => {
 };
 
 // ---------------------------------------------------------
-// ACTIVE GAME (YAKUNIY: name orqali o'qish + Durang + Bloklash)
+// ACTIVE GAME (YAKUNIY MANTIQIY TUZATISH: Actor ID)
 // ---------------------------------------------------------
 const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
+    // STATE
     const [questions, setQuestions] = useState([]);
     const [currIdx, setCurrIdx] = useState(0);
     const [gameState, setGameState] = useState('intro');
-
-    // Ballar
     const [myScore, setMyScore] = useState(0);
     const [oppScore, setOppScore] = useState(0);
 
-    // Statuslar
-    const [locked, setLocked] = useState(false); // Tugmalarni bloklash
-    const [myAnswer, setMyAnswer] = useState(null); // Men nima belgiladim
-    const [oppAnswer, setOppAnswer] = useState(null); // Raqib nima qildi
+    // UI Statuslar
+    const [locked, setLocked] = useState(false);
+    const [myAnswer, setMyAnswer] = useState(null);
+    const [oppAnswer, setOppAnswer] = useState(null);
+
+    // MANTIQ UCHUN JONLI XOTIRA (REFS)
+    const questionsRef = useRef([]);
+    const currIdxRef = useRef(0);
+    const isRoundOver = useRef(false);
 
     const correctSfx = useRef(new Audio('/assets/audio/Water_Lily.mp3'));
-
     const oppName = opponent?.short_name || opponent?.name || "Raqib";
 
-    // 1. O'YIN JARAYONINI TINGLASH (PUSHER)
+    // Reflarni State bilan sinxronlash
+    useEffect(() => { questionsRef.current = questions; }, [questions]);
+    useEffect(() => { currIdxRef.current = currIdx; }, [currIdx]);
+
+    // 1. SIGNAL TINGLASH (PUSHER)
     useEffect(() => {
         if (!echo || !currentUser) return;
         const channel = echo.private(`user.${currentUser.id}`);
 
         channel.listen('.DuelGameState', (e) => {
-            console.log("⚡ SIGNAL KELDI:", e);
+            console.log("⚡ SERVER SIGNAL:", e);
 
-            // AGAR RAQIB JAVOB BERSA
             if (e.type === 'answer') {
-                setLocked(true); // 1. Men darhol bloklanaman
+                // 1. O'yinni to'xtatamiz
+                setLocked(true);
+                isRoundOver.current = true;
 
-                // 2. Raqib ballini yangilaymiz
-                if (e.data.isCorrect) {
-                    setOppScore(s => s + 10);
-                    setOppAnswer('correct');
+                // ⚠️ ENG MUHIM TUZATISH SHU YERDA:
+                // Biz 'userId' ga emas, data ichidagi 'actor_id' ga qaraymiz
+                const isMe = e.data.actor_id === currentUser.id;
+                const isCorrect = e.data.isCorrect;
+
+                // 2. Ballarni yangilash
+                if (isCorrect) {
+                    if (isMe) {
+                        setMyScore(s => s + 10);
+                        setMyAnswer('correct');
+                        correctSfx.current.play().catch(() => { });
+                    } else {
+                        setOppScore(s => s + 10);
+                        setOppAnswer('correct');
+                    }
                 } else {
-                    setOppAnswer('wrong');
+                    // Xato javob
+                    if (isMe) setMyAnswer('wrong');
+                    else setOppAnswer('wrong');
                 }
 
                 // 3. Xabar chiqarish
+                const actorName = isMe ? "Siz" : oppName;
                 Swal.fire({
-                    title: `${oppName} birinchi javob berdi!`,
-                    text: e.data.isCorrect ? "To'g'ri topdi ✅" : "Xato qildi ❌",
-                    icon: e.data.isCorrect ? 'warning' : 'info',
+                    title: `${actorName} birinchi bo'ldi!`,
+                    text: isCorrect ? "To'g'ri topdi ✅" : "Xato qildi ❌",
+                    icon: isCorrect ? 'success' : 'error',
                     timer: 1500,
                     showConfirmButton: false,
                     toast: true,
@@ -244,9 +266,16 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
                     background: '#1F2937', color: '#fff'
                 });
 
-                // 4. 2 soniyadan keyin keyingi savol
+                // 4. KEYINGI SAVOLGA O'TISH
                 setTimeout(() => {
-                    handleNextQuestion();
+                    const totalQuestions = questionsRef.current.length;
+                    const current = currIdxRef.current;
+
+                    if (totalQuestions > 0 && current < totalQuestions - 1) {
+                        handleNextQuestion();
+                    } else {
+                        setGameState('finished');
+                    }
                 }, 2000);
             }
         });
@@ -254,7 +283,7 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
         return () => { channel.stopListening('.DuelGameState'); };
     }, [echo, currentUser, oppName]);
 
-    // 2. SAVOLLARNI YUKLASH (TUZATILDI: 'name' ISHLATILDI)
+    // 2. SAVOLLARNI YUKLASH
     useEffect(() => {
         const loadQ = async () => {
             try {
@@ -264,78 +293,61 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
                 const d = await res.json();
 
                 if (d.success && d.data.questions) {
-                    // ✅ ENG MUHIM JOYI: 'name' ni ishlatamiz
                     const formatted = d.data.questions.map(q => ({
                         id: q.id,
-                        question: q.name, // <--- O'ZGARDI: 'question_text' emas, 'name'
+                        question: q.name || q.question_text,
                         options: q.options.map(o => ({
                             id: o.id,
-                            text: o.name,     // <--- O'ZGARDI: 'option_text' emas, 'name'
+                            text: o.name || o.option_text,
                             isCorrect: Boolean(o.is_correct)
                         }))
                     }));
                     setQuestions(formatted);
+                    questionsRef.current = formatted;
                 }
             } catch (e) { console.error(e); }
         };
         loadQ();
     }, []);
 
-    // 3. O'YINNI BOSHLASH (TIMER)
+    // 3. TIMER
     useEffect(() => {
         if (questions.length > 0 && gameState === 'intro') {
             setTimeout(() => setGameState('playing'), 3000);
         }
     }, [questions, gameState]);
 
-    // SERVERGA SIGNAL YUBORISH
+    // SERVERGA YUBORISH
     const broadcastState = async (type, data) => {
         try {
             await fetch(`${API_BASE_URL}/api/quiz/duel/state`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ opponent_id: opponent.id, type, data })
+                body: JSON.stringify({
+                    opponent_id: opponent.id,
+                    type,
+                    data: { ...data, question_index: currIdxRef.current }
+                })
             });
         } catch (e) { console.error(e); }
     };
 
-    // MEN JAVOB BERGANIMDA
+    // TUGMA BOSILGANDA
     const handleAnswer = (opt) => {
-        if (locked) return;
-        setLocked(true); // Bloklaymiz
+        if (locked || isRoundOver.current) return;
 
-        const isCorrect = opt.isCorrect;
-        if (isCorrect) {
-            correctSfx.current.play().catch(() => { });
-            setMyScore(s => s + 10);
-            setMyAnswer('correct');
-        } else {
-            setMyAnswer('wrong');
-        }
-
-        // Raqibga signal yuboramiz
-        broadcastState('answer', { isCorrect });
-
-        // 2 soniyadan keyin o'tamiz
-        setTimeout(() => {
-            handleNextQuestion();
-        }, 2000);
+        setLocked(true);
+        broadcastState('answer', { isCorrect: opt.isCorrect });
     };
 
-    // KEYINGI SAVOLGA O'TISH
+    // KEYINGI SAVOLGA O'TISH FUNKSIYASI
     const handleNextQuestion = () => {
         setMyAnswer(null);
         setOppAnswer(null);
         setLocked(false);
+        isRoundOver.current = false;
 
-        setCurrIdx(prev => {
-            if (prev < questions.length - 1) {
-                return prev + 1;
-            } else {
-                setGameState('finished');
-                return prev;
-            }
-        });
+        setCurrIdx(prev => prev + 1);
     };
 
     // --- RENDER ---
@@ -347,30 +359,17 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
         </div>
     );
 
-    // --- DURANG (DRAW) MANTIQI ---
     if (gameState === 'finished') {
         const iWon = myScore > oppScore;
         const isDraw = myScore === oppScore;
-
         return (
             <div className="h-screen bg-gray-900 flex items-center justify-center text-white relative">
                 <div className="absolute inset-0 bg-[url('/assets/img/grid.svg')] opacity-10"></div>
                 <div className="bg-gray-800 p-12 rounded-3xl text-center border border-gray-700 shadow-2xl relative z-10 w-full max-w-lg">
-
-                    {/* Ikonka */}
-                    {iWon ? (
-                        <Trophy className="w-24 h-24 mx-auto mb-6 text-yellow-400 animate-bounce" />
-                    ) : isDraw ? (
-                        <Swords className="w-24 h-24 mx-auto mb-6 text-blue-400" />
-                    ) : (
-                        <Trophy className="w-24 h-24 mx-auto mb-6 text-gray-600 grayscale" />
-                    )}
-
-                    {/* Matn */}
+                    {iWon ? <Trophy className="w-24 h-24 mx-auto mb-6 text-yellow-400 animate-bounce" /> : isDraw ? <Swords className="w-24 h-24 mx-auto mb-6 text-blue-400" /> : <Trophy className="w-24 h-24 mx-auto mb-6 text-gray-600 grayscale" />}
                     <h2 className={`text-5xl font-black mb-2 ${iWon ? 'text-yellow-400' : isDraw ? 'text-blue-400' : 'text-gray-400'}`}>
                         {iWon ? "G'ALABA!" : isDraw ? "DURANG" : "MAG'LUBIYAT"}
                     </h2>
-
                     <div className="flex justify-center gap-6 my-6 text-4xl font-bold">
                         <span className="text-blue-400">{myScore}</span> : <span className="text-red-400">{oppScore}</span>
                     </div>
@@ -383,28 +382,20 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
     const q = questions[currIdx];
     return (
         <div className="h-screen flex flex-col bg-gray-900 overflow-hidden select-none font-sans text-white">
-            {/* Top Bar */}
             <div className="h-20 bg-gray-800 border-b border-gray-700 flex justify-between items-center px-8">
                 <div><div className="text-gray-400 text-xs font-bold">SIZ</div><div className="text-2xl font-black">{myScore}</div></div>
                 <div className="bg-gray-700 px-4 py-1 rounded-full font-bold">{currIdx + 1} / {questions.length}</div>
                 <div className="text-right"><div className="text-gray-400 text-xs font-bold">{oppName}</div><div className="text-2xl font-black">{oppScore}</div></div>
             </div>
 
-            {/* Progress */}
             <div className="w-full h-1 bg-gray-800"><div className="h-full bg-indigo-500 transition-all duration-500" style={{ width: `${((currIdx + 1) / questions.length) * 100}%` }}></div></div>
 
-            {/* Question */}
             <div className="flex-1 flex flex-col justify-center items-center p-6 max-w-5xl mx-auto w-full">
-
-                {/* SAVOL MATNI */}
-                <div className="mb-10 text-center">
-                    <MathText className="text-3xl font-black">{q.question}</MathText>
-                </div>
+                <div className="mb-10 text-center"><MathText className="text-3xl font-black">{q.question}</MathText></div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                     {q.options.map((opt, idx) => {
                         let statusClass = "bg-gray-800 border-gray-700 hover:bg-gray-700";
-
                         if (locked) {
                             if (myAnswer === 'correct' && opt.isCorrect) statusClass = "bg-green-600 border-green-500";
                             else if (myAnswer === 'wrong' && !opt.isCorrect) statusClass = "bg-red-600 border-red-500";
@@ -413,22 +404,16 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
                         }
 
                         return (
-                            <button
-                                key={idx}
-                                onClick={() => handleAnswer(opt)}
-                                disabled={locked}
-                                className={`p-6 rounded-2xl border-2 text-left transition-all ${statusClass} ${!locked && 'hover:scale-[1.02] hover:border-gray-500'}`}
-                            >
+                            <button key={idx} onClick={() => handleAnswer(opt)} disabled={locked || isRoundOver.current} className={`p-6 rounded-2xl border-2 text-left transition-all ${statusClass} ${(!locked && !isRoundOver.current) && 'hover:scale-[1.02] hover:border-gray-500'}`}>
                                 <div className="flex items-center gap-4">
                                     <span className="font-bold text-gray-400">{['A', 'B', 'C', 'D'][idx]}</span>
-                                    {/* JAVOB MATNI */}
                                     <span className="font-bold text-lg"><MathText>{opt.text}</MathText></span>
                                 </div>
                             </button>
                         );
                     })}
                 </div>
-                {locked && <div className="mt-8 text-indigo-400 animate-pulse font-bold">Keyingi savolga o'tilmoqda...</div>}
+                {(locked || isRoundOver.current) && <div className="mt-8 text-indigo-400 animate-pulse font-bold">Javob tekshirilmoqda...</div>}
             </div>
         </div>
     );
