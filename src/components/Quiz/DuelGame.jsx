@@ -9,7 +9,7 @@ import MathText from './MathText';
 import { API_BASE_URL } from '../../config';
 
 // ---------------------------------------------------------
-// CONFIGURATION
+// CONFIGURATION & ECHO INIT
 // ---------------------------------------------------------
 window.Pusher = Pusher;
 const initEcho = () => {
@@ -29,6 +29,10 @@ const initEcho = () => {
 };
 initEcho();
 
+
+// ---------------------------------------------------------
+// MAIN COMPONENT: DuelGame (Router & Data Loaders)
+// ---------------------------------------------------------
 const DuelGame = ({ onExit }) => {
     const [view, setView] = useState('list');
     const [quizzes, setQuizzes] = useState([]);
@@ -41,13 +45,38 @@ const DuelGame = ({ onExit }) => {
         try { return JSON.parse(localStorage.getItem('user')); } catch (e) { return null; }
     });
 
+    const [onlineUsers, setOnlineUsers] = useState({});
+
+
+    // PUSHER KANALLARINI TINGLASH
     useEffect(() => {
         initEcho();
         if (!currentUser || !window.Echo) return;
 
-        const channel = window.Echo.private(`user.${currentUser.id}`);
+        const privateChannel = window.Echo.private(`user.${currentUser.id}`);
 
-        channel.listen('.DuelChallenge', (e) => {
+        // 1. Presence Channel (Onlayn status)
+        const presenceChannel = window.Echo.join('presence-online')
+            .here((members) => {
+                const initialOnline = members.reduce((acc, member) => {
+                    acc[member.id] = member.info;
+                    return acc;
+                }, {});
+                setOnlineUsers(initialOnline);
+            })
+            .joining((member) => {
+                setOnlineUsers(prev => ({ ...prev, [member.id]: member.info }));
+            })
+            .leaving((member) => {
+                setOnlineUsers(prev => {
+                    const newState = { ...prev };
+                    delete newState[member.id];
+                    return newState;
+                });
+            });
+
+        // 2. Duelga Chaqiruv
+        privateChannel.listen('.DuelChallenge', (e) => {
             new Audio('/assets/audio/notification.mp3').play().catch(() => { });
             Swal.fire({
                 title: '⚔️ Duelga chaqiruv!',
@@ -58,14 +87,14 @@ const DuelGame = ({ onExit }) => {
                 cancelButtonText: 'Rad etish',
                 confirmButtonColor: '#4F46E5',
                 cancelButtonColor: '#EF4444',
-                background: '#1F2937',
-                color: '#fff'
+                background: '#1F2937', color: '#fff'
             }).then((result) => {
                 if (result.isConfirmed) acceptChallenge(e.challenger, e.quizId, e.subjectId);
             });
         });
 
-        channel.listen('.DuelAccepted', (e) => {
+        // 3. Duel Qabul qilindi
+        privateChannel.listen('.DuelAccepted', (e) => {
             Swal.close();
             Swal.fire({
                 title: 'Jang Boshlandi!',
@@ -80,7 +109,12 @@ const DuelGame = ({ onExit }) => {
             });
         });
 
-        return () => window.Echo && window.Echo.leave(`user.${currentUser.id}`);
+        // Tozalash
+        return () => {
+            window.Echo.leave('presence-online');
+            window.Echo.leave(`user.${currentUser.id}`);
+        };
+
     }, [currentUser]);
 
     // API Calls
@@ -136,6 +170,7 @@ const DuelGame = ({ onExit }) => {
         load();
     }, []);
 
+
     if (view === 'list') return (
         <div className="min-h-screen bg-gray-900 p-6 font-sans text-gray-100">
             <div className="max-w-6xl mx-auto">
@@ -174,31 +209,58 @@ const DuelGame = ({ onExit }) => {
             <p className="text-gray-400 mb-10">Kim bilan kuch sinashmoqchisiz?</p>
             {loading ? <Loader /> : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 max-w-5xl">
-                    {classmates.map(student => (
-                        <div key={student.id} onClick={() => sendChallenge(student)} className="bg-gray-800 p-4 rounded-2xl border border-gray-700 hover:border-indigo-500 hover:scale-105 cursor-pointer transition-all text-center group shadow-lg">
-                            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-700 overflow-hidden border-2 border-gray-600 group-hover:border-indigo-500 transition-colors">
-                                {student.avatar ? <img src={student.avatar} className="w-full h-full object-cover" /> : <User className="w-10 h-10 m-auto mt-4 text-gray-500" />}
+                    {classmates.map(student => {
+                        const isOnline = onlineUsers[student.id];
+
+                        if (student.id === currentUser.id) return null;
+
+                        return (
+                            <div
+                                key={student.id}
+                                onClick={() => isOnline && sendChallenge(student)}
+                                className={`bg-gray-800 p-4 rounded-2xl border border-gray-700 transition-all text-center group shadow-lg 
+                                    ${isOnline ? 'hover:border-indigo-500 hover:scale-105 cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
+                            >
+
+                                {/* ✅ AVATAR CONTAINER (w-20 aspect-square bilan tuzatilgan) */}
+                                <div className="w-20 aspect-square mx-auto mb-4 rounded-full bg-gray-700 overflow-hidden border-2 border-gray-600 group-hover:border-indigo-500 transition-colors flex items-center justify-center">
+                                    {student.avatar ? (
+                                        <img src={student.avatar} className="w-full h-full object-cover" alt={student.name} />
+                                    ) : (
+                                        <User className="w-16 h-16 text-gray-500" />
+                                    )}
+                                </div>
+
+                                <h4 className="font-bold text-gray-200 group-hover:text-indigo-400 truncate">{student.name}</h4>
+                                {/* ONLINE STATUS */}
+                                <span className={`text-xs font-medium flex items-center justify-center gap-1 mt-1 
+                                    ${isOnline ? 'text-green-400' : 'text-red-400'}`}>
+                                    <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
+                                    {isOnline ? 'Online' : 'Offline'}
+                                </span>
                             </div>
-                            <h4 className="font-bold text-gray-200 group-hover:text-indigo-400 truncate">{student.name}</h4>
-                            <span className="text-xs text-green-400 font-medium flex items-center justify-center gap-1 mt-1"><span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Online</span>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>
     );
 
+    // DuelGame render calls ActiveGame
     return <ActiveGame quiz={selectedQuiz} opponent={opponent} currentUser={currentUser} echo={window.Echo} onBack={() => { if (confirm("Chiqish?")) { setView('list'); setOpponent(null); } }} />;
 };
 
+
 // ---------------------------------------------------------
-// ACTIVE GAME (YAKUNIY MANTIQIY TUZATISH: Actor ID)
+// ACTIVE GAME (HAMMASI BOG'LANGAN)
 // ---------------------------------------------------------
 const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
     // STATE
     const [questions, setQuestions] = useState([]);
     const [currIdx, setCurrIdx] = useState(0);
     const [gameState, setGameState] = useState('intro');
+
+    // Ballar
     const [myScore, setMyScore] = useState(0);
     const [oppScore, setOppScore] = useState(0);
 
@@ -225,19 +287,14 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
         const channel = echo.private(`user.${currentUser.id}`);
 
         channel.listen('.DuelGameState', (e) => {
-            console.log("⚡ SERVER SIGNAL:", e);
-
             if (e.type === 'answer') {
-                // 1. O'yinni to'xtatamiz
                 setLocked(true);
                 isRoundOver.current = true;
 
-                // ⚠️ ENG MUHIM TUZATISH SHU YERDA:
-                // Biz 'userId' ga emas, data ichidagi 'actor_id' ga qaraymiz
+                // Ballarni yangilash
                 const isMe = e.data.actor_id === currentUser.id;
                 const isCorrect = e.data.isCorrect;
 
-                // 2. Ballarni yangilash
                 if (isCorrect) {
                     if (isMe) {
                         setMyScore(s => s + 10);
@@ -248,12 +305,11 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
                         setOppAnswer('correct');
                     }
                 } else {
-                    // Xato javob
                     if (isMe) setMyAnswer('wrong');
                     else setOppAnswer('wrong');
                 }
 
-                // 3. Xabar chiqarish
+                // Xabar chiqarish
                 const actorName = isMe ? "Siz" : oppName;
                 Swal.fire({
                     title: `${actorName} birinchi bo'ldi!`,
@@ -266,7 +322,7 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
                     background: '#1F2937', color: '#fff'
                 });
 
-                // 4. KEYINGI SAVOLGA O'TISH
+                // Keyingi savolga o'tish
                 setTimeout(() => {
                     const totalQuestions = questionsRef.current.length;
                     const current = currIdxRef.current;
@@ -310,7 +366,7 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
         loadQ();
     }, []);
 
-    // 3. TIMER
+    // 3. TIMER (INTRO)
     useEffect(() => {
         if (questions.length > 0 && gameState === 'intro') {
             setTimeout(() => setGameState('playing'), 3000);
@@ -337,6 +393,8 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
         if (locked || isRoundOver.current) return;
 
         setLocked(true);
+        isRoundOver.current = true;
+
         broadcastState('answer', { isCorrect: opt.isCorrect });
     };
 
