@@ -24,6 +24,14 @@ const initEcho = () => {
             authEndpoint: `${API_BASE_URL}/api/broadcasting/auth`,
             auth: { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } },
         });
+
+        // DEBUG LOGGING QO'SHILDI
+        window.Echo.connector.pusher.connection.bind('connected', () => {
+            console.log("✅ PUSHER STATUS: ULANGAN (CONNECTED)");
+        });
+        window.Echo.connector.pusher.connection.bind('disconnected', () => {
+            console.log("🔴 PUSHER STATUS: UZILGAN (DISCONNECTED)");
+        });
     }
     return window.Echo;
 };
@@ -46,6 +54,12 @@ const DuelGame = ({ onExit }) => {
     });
 
     const [onlineUsers, setOnlineUsers] = useState({});
+    const quizzesRef = useRef([]);
+
+
+    useEffect(() => {
+        quizzesRef.current = quizzes;
+    }, [quizzes]);
 
 
     // PUSHER KANALLARINI TINGLASH
@@ -55,62 +69,97 @@ const DuelGame = ({ onExit }) => {
 
         const privateChannel = window.Echo.private(`user.${currentUser.id}`);
 
-        // 1. Presence Channel (Onlayn status)
+        // ✅ Presence Channel (Online status)
         const presenceChannel = window.Echo.join('presence-online')
             .here((members) => {
+                console.log('📋 Boshlang\'ich online foydalanuvchilar:', members);
+
                 const initialOnline = members.reduce((acc, member) => {
-                    acc[member.id] = member.info;
+                    // ✅ Pusher ID ni tozalash va STRING qilish
+                    const cleanId = String(member.id).trim();
+                    acc[cleanId] = member.info || member;
+                    console.log(`✅ Online: ID=${cleanId}, Name=${member.info?.name || 'noma\'lum'}`);
                     return acc;
                 }, {});
+
                 setOnlineUsers(initialOnline);
             })
             .joining((member) => {
-                setOnlineUsers(prev => ({ ...prev, [member.id]: member.info }));
+                const cleanId = String(member.id).trim();
+                console.log(`🟢 Foydalanuvchi qo'shildi: ID=${cleanId}`);
+                setOnlineUsers(prev => ({
+                    ...prev,
+                    [cleanId]: member.info || member
+                }));
             })
             .leaving((member) => {
+                const cleanId = String(member.id).trim();
+                console.log(`🔴 Foydalanuvchi chiqdi: ID=${cleanId}`);
                 setOnlineUsers(prev => {
                     const newState = { ...prev };
-                    delete newState[member.id];
+                    delete newState[cleanId];
                     return newState;
                 });
             });
 
-        // 2. Duelga Chaqiruv
+        // Duel Challenge listener
         privateChannel.listen('.DuelChallenge', (e) => {
-            new Audio('/assets/audio/notification.mp3').play().catch(() => { });
+            console.log('📨 Duel Challenge keldi:', e);
+
+            // ✅ Fan nomini topish
+            const subjectName = quizzesRef.current
+                .find(q => q.subject.id === e.subjectId)
+                ?.subject.name || 'Noma\'lum';
+
             Swal.fire({
                 title: '⚔️ Duelga chaqiruv!',
-                html: `<span class="text-lg font-bold text-indigo-600">${e.challenger.first_name}</span> sizni jangga chorlamoqda!`,
+                html: `<span class="text-lg font-bold text-indigo-600">${e.challenger.first_name}</span> sizni jangga chorlamoqda!<br>Fan: <b>${subjectName}</b>`,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonText: 'Qabul qilish',
                 cancelButtonText: 'Rad etish',
                 confirmButtonColor: '#4F46E5',
                 cancelButtonColor: '#EF4444',
-                background: '#1F2937', color: '#fff'
+                background: '#1F2937',
+                color: '#fff'
             }).then((result) => {
-                if (result.isConfirmed) acceptChallenge(e.challenger, e.quizId, e.subjectId);
+                if (result.isConfirmed) {
+                    // ✅ quizId va subjectId ni to'g'ri uzatish
+                    acceptChallenge(e.challenger, e.quizId, e.subjectId);
+                }
             });
         });
 
-        // 3. Duel Qabul qilindi
         privateChannel.listen('.DuelAccepted', (e) => {
-            Swal.close();
-            Swal.fire({
-                title: 'Jang Boshlandi!',
-                text: `${e.accepter.first_name} qabul qildi.`,
-                icon: 'success',
-                timer: 1500,
-                showConfirmButton: false,
-                background: '#1F2937', color: '#fff'
-            }).then(() => {
-                setOpponent(e.accepter);
-                setView('game');
-            });
-        });
+            console.log('✅ Duel qabul qilindi:', e);
 
-        // Tozalash
+            if (window.duelChallengeTimeout) {
+                clearTimeout(window.duelChallengeTimeout);
+                delete window.duelChallengeTimeout;
+            }
+
+            Swal.close();
+
+            const acceptedQuiz = quizzesRef.current.find(q => String(q.id) === String(e.quizId));
+            setSelectedQuiz(acceptedQuiz || { id: String(e.quizId), subject: { id: String(e.subjectId) }, name: "Duel Quiz" });
+            setOpponent(e.accepter);
+
+            // ✅ DARHOL o'yinga o'tish (Swal siz)
+            setView('game');
+
+            // ✅ Xabarni keyinroq ko'rsatish
+            setTimeout(() => {
+                Swal.fire({
+                    title: 'Jang Boshlandi!',
+                    toast: true,
+                    position: 'top-end',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            }, 500);
+        });
         return () => {
+            console.log('🔌 Kanallardan uzilish...');
             window.Echo.leave('presence-online');
             window.Echo.leave(`user.${currentUser.id}`);
         };
@@ -120,35 +169,113 @@ const DuelGame = ({ onExit }) => {
     // API Calls
     const sendChallenge = async (target) => {
         if (!selectedQuiz) return;
+
+        const currentQuiz = selectedQuiz;
+
         try {
+            // ✅ 1. Loader dialogni ochish
             Swal.fire({
                 title: 'Kutilmoqda...',
                 html: `<b>${target.name}</b> javobini kuting...`,
                 allowOutsideClick: false,
-                background: '#1F2937', color: '#fff',
+                background: '#1F2937',
+                color: '#fff',
                 didOpen: () => Swal.showLoading()
             });
+
+            // ✅ 2. Timeout o'rnatish (30 soniya)
+            const timeoutId = setTimeout(() => {
+                Swal.fire({
+                    title: 'Vaqt tugadi',
+                    text: 'Raqib javob bermadi',
+                    icon: 'warning',
+                    background: '#1F2937',
+                    color: '#fff'
+                });
+            }, 30000);
+
+            // ✅ 3. Global o'zgaruvchiga saqlash (DuelAccepted da bekor qilish uchun)
+            window.duelChallengeTimeout = timeoutId;
+
             const token = localStorage.getItem('token');
             await fetch(`${API_BASE_URL}/api/quiz/duel/challenge`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ target_user_id: target.id, quiz_id: selectedQuiz.id, subject_id: selectedQuiz.subject.id })
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    target_user_id: target.id,
+                    quiz_id: currentQuiz.id,
+                    subject_id: currentQuiz.subject.id
+                })
             });
-        } catch (e) { Swal.fire('Xatolik', 'Tarmoq xatosi', 'error'); }
+
+            console.log('✅ Challenge yuborildi');
+            setSelectedQuiz(currentQuiz);
+
+        } catch (e) {
+            console.error('❌ Xatolik:', e);
+
+            // ✅ Xatolik bo'lsa timeoutni bekor qilish
+            if (window.duelChallengeTimeout) {
+                clearTimeout(window.duelChallengeTimeout);
+                delete window.duelChallengeTimeout;
+            }
+
+            Swal.fire('Xatolik', 'Tarmoq xatosi', 'error');
+        }
     };
+
 
     const acceptChallenge = async (challenger, quizId, subjectId) => {
         try {
             const token = localStorage.getItem('token');
-            await fetch(`${API_BASE_URL}/api/quiz/duel/accept`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ challenger_id: challenger.id })
+
+            console.log('📤 Accept qilish uchun yuborilayotgan ma\'lumotlar:', {
+                challenger_id: challenger.id,
+                quiz_id: quizId,
+                subject_id: subjectId
             });
-            setSelectedQuiz({ id: quizId, subject: { id: subjectId }, name: "Duel Quiz" });
-            setOpponent(challenger);
-            setView('game');
-        } catch (e) { console.error(e); }
+
+            // ✅ quiz_id va subject_id ni ham yuborish
+            const response = await fetch(`${API_BASE_URL}/api/quiz/duel/accept`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    challenger_id: challenger.id,
+                    quiz_id: quizId,  // ✅ QO'SHILDI
+                    subject_id: subjectId  // ✅ QO'SHILDI
+                })
+            });
+
+            const data = await response.json();
+            console.log('✅ Accept response:', data);
+
+            // Quiz ma'lumotini topish
+            const acceptedQuiz = quizzes.find(q => q.id === quizId);
+
+            if (acceptedQuiz) {
+                setSelectedQuiz(acceptedQuiz);
+                setOpponent(challenger);
+                setView('game');
+            } else {
+                setSelectedQuiz({
+                    id: quizId,
+                    subject: { id: subjectId },
+                    name: "Duel Quiz"
+                });
+                setOpponent(challenger);
+                setView('game');
+            }
+
+        } catch (e) {
+            console.error("❌ Duel qabul qilishda xatolik:", e);
+            Swal.fire('Xatolik', 'So\'rov qabul qilinmadi', 'error');
+        }
     };
 
     // Data Loaders
@@ -158,14 +285,40 @@ const DuelGame = ({ onExit }) => {
             try {
                 const token = localStorage.getItem('token');
                 const [qRes, cRes] = await Promise.all([
-                    fetch(`${API_BASE_URL}/api/quiz/duel/list`, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } }),
-                    fetch(`${API_BASE_URL}/api/quiz/duel/classmates`, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } })
+                    fetch(`${API_BASE_URL}/api/quiz/duel/list`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json'
+                        }
+                    }),
+                    fetch(`${API_BASE_URL}/api/quiz/duel/classmates`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json'
+                        }
+                    })
                 ]);
+
                 const qData = await qRes.json();
                 const cData = await cRes.json();
+
                 if (qData.success) setQuizzes(qData.data);
-                if (cData.success) setClassmates(cData.data);
-            } catch (e) { console.error(e); } finally { setLoading(false); }
+
+                if (cData.success) {
+                    // ✅ ID ni STRING ga o'girish va bo'sh joylarni o'chirish
+                    const formattedClassmates = cData.data.map(c => ({
+                        ...c,
+                        id: String(c.id).trim() // ⚠️ Muhim!
+                    }));
+
+                    console.log('👥 Sinfdoshlar ro\'yxati:', formattedClassmates);
+                    setClassmates(formattedClassmates);
+                }
+            } catch (e) {
+                console.error('❌ Ma\'lumot yuklashda xatolik:', e);
+            } finally {
+                setLoading(false);
+            }
         };
         load();
     }, []);
@@ -204,25 +357,39 @@ const DuelGame = ({ onExit }) => {
 
     if (view === 'opponent') return (
         <div className="min-h-screen bg-gray-900 p-6 flex flex-col items-center justify-center text-white">
-            <button onClick={() => { setView('list'); setSelectedQuiz(null); }} className="absolute top-6 left-6 flex items-center gap-2 text-gray-400 hover:text-white transition-colors"><ArrowLeft className="w-5 h-5" /> Orqaga</button>
+            <button
+                onClick={() => { setView('list'); setSelectedQuiz(null); }}
+                className="absolute top-6 left-6 flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
+                <ArrowLeft className="w-5 h-5" /> Orqaga
+            </button>
+
             <h2 className="text-3xl font-bold mb-2">Raqibni Tanlang</h2>
             <p className="text-gray-400 mb-10">Kim bilan kuch sinashmoqchisiz?</p>
+
+            {/* ✅ Debug panel */}
+            <div className="mb-4 p-4 bg-gray-800 rounded-lg text-xs text-gray-400 max-w-2xl">
+                <div><strong>Online foydalanuvchilar:</strong> {Object.keys(onlineUsers).join(', ') || 'Yo\'q'}</div>
+                <div><strong>Sinfdoshlar ID:</strong> {classmates.map(c => c.id).join(', ')}</div>
+            </div>
+
             {loading ? <Loader /> : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 max-w-5xl">
                     {classmates.map(student => {
-                        const isOnline = onlineUsers[student.id];
+                        // ✅ ID ni tozalash
+                        const studentIdString = String(student.id).trim();
+                        const isOnline = !!onlineUsers[studentIdString];
 
-                        if (student.id === currentUser.id) return null;
+                        console.log(`🔍 Tekshiruv: Student ID=${studentIdString}, Online=${isOnline}`);
+
+                        if (student.id === String(currentUser.id).trim()) return null;
 
                         return (
                             <div
                                 key={student.id}
                                 onClick={() => isOnline && sendChallenge(student)}
                                 className={`bg-gray-800 p-4 rounded-2xl border border-gray-700 transition-all text-center group shadow-lg 
-                                    ${isOnline ? 'hover:border-indigo-500 hover:scale-105 cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
+                                ${isOnline ? 'hover:border-indigo-500 hover:scale-105 cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
                             >
-
-                                {/* ✅ AVATAR CONTAINER (w-20 aspect-square bilan tuzatilgan) */}
                                 <div className="w-20 aspect-square mx-auto mb-4 rounded-full bg-gray-700 overflow-hidden border-2 border-gray-600 group-hover:border-indigo-500 transition-colors flex items-center justify-center">
                                     {student.avatar ? (
                                         <img src={student.avatar} className="w-full h-full object-cover" alt={student.name} />
@@ -232,9 +399,10 @@ const DuelGame = ({ onExit }) => {
                                 </div>
 
                                 <h4 className="font-bold text-gray-200 group-hover:text-indigo-400 truncate">{student.name}</h4>
-                                {/* ONLINE STATUS */}
+
+                                {/* ✅ Online status */}
                                 <span className={`text-xs font-medium flex items-center justify-center gap-1 mt-1 
-                                    ${isOnline ? 'text-green-400' : 'text-red-400'}`}>
+                                ${isOnline ? 'text-green-400' : 'text-red-400'}`}>
                                     <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
                                     {isOnline ? 'Online' : 'Offline'}
                                 </span>
@@ -247,7 +415,21 @@ const DuelGame = ({ onExit }) => {
     );
 
     // DuelGame render calls ActiveGame
-    return <ActiveGame quiz={selectedQuiz} opponent={opponent} currentUser={currentUser} echo={window.Echo} onBack={() => { if (confirm("Chiqish?")) { setView('list'); setOpponent(null); } }} />;
+    if (view === 'game') return (
+        <ActiveGame
+            quiz={selectedQuiz}
+            opponent={opponent}
+            currentUser={currentUser}
+            echo={window.Echo}
+            onBack={() => {
+                if (confirm("Chiqish?")) {
+                    setView('list');
+                    setOpponent(null);
+                    setSelectedQuiz(null);
+                }
+            }}
+        />
+    );
 };
 
 
@@ -341,8 +523,14 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
 
     // 2. SAVOLLARNI YUKLASH
     useEffect(() => {
+        // ✅ 1. Qaramlikni (dependency) tekshirish: Agar quiz mavjud bo'lmasa, funksiyadan chiqing
+        if (!quiz || !quiz.id || !quiz.subject || !quiz.subject.id) {
+            return;
+        }
+
         const loadQ = async () => {
             try {
+                // Bu yerda quiz.subject.id va quiz.id qiymatlari aniq mavjud
                 const res = await fetch(`${API_BASE_URL}/api/quiz/${quiz.subject.id}/${quiz.id}/duel`, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Accept': 'application/json' }
                 });
@@ -363,8 +551,10 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
                 }
             } catch (e) { console.error(e); }
         };
+
         loadQ();
-    }, []);
+
+    }, [quiz]);
 
     // 3. TIMER (INTRO)
     useEffect(() => {
