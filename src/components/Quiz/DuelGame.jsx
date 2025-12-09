@@ -9,37 +9,124 @@ import MathText from './MathText';
 import { API_BASE_URL } from '../../config';
 
 // ---------------------------------------------------------
-// CONFIGURATION & ECHO INIT
+// PUSHER KONFIGURATSIYA
 // ---------------------------------------------------------
 window.Pusher = Pusher;
-const initEcho = () => {
-    if (window.Echo) return window.Echo;
-    const token = localStorage.getItem('token');
-    if (token) {
-        window.Echo = new Echo({
-            broadcaster: 'pusher',
-            key: 'bd72b3eabbe0fb9d1258',
-            cluster: 'ap1',
-            forceTLS: true,
-            authEndpoint: `${API_BASE_URL}/api/broadcasting/auth`,
-            auth: { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } },
-        });
 
-        // DEBUG LOGGING QO'SHILDI
-        window.Echo.connector.pusher.connection.bind('connected', () => {
-            console.log("✅ PUSHER STATUS: ULANGAN (CONNECTED)");
-        });
-        window.Echo.connector.pusher.connection.bind('disconnected', () => {
-            console.log("🔴 PUSHER STATUS: UZILGAN (DISCONNECTED)");
-        });
+// ✅ TUZATILDI: Bu funksiya faqat kerak bo'lganda chaqiriladi
+const initEcho = () => {
+    // Agar Echo allaqachon mavjud va ulangan bo'lsa, uni qaytaramiz
+    if (window.Echo) {
+        const state = window.Echo.connector?.pusher?.connection?.state;
+        if (state === 'connected' || state === 'connecting') {
+            console.log('✅ Echo allaqachon mavjud:', state);
+            return window.Echo;
+        }
     }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+        console.error('❌ Token topilmadi! Login qiling.');
+        return null;
+    }
+
+    console.log('🔧 Yangi Echo instance yaratilmoqda...');
+
+    window.Echo = new Echo({
+        broadcaster: 'pusher',
+        key: 'bd72b3eabbe0fb9d1258',
+        cluster: 'ap1',
+        forceTLS: true,
+        authEndpoint: `${API_BASE_URL}/api/broadcasting/auth`,
+
+        auth: {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        },
+
+        authorizer: (channel, options) => {
+            return {
+                authorize: (socketId, callback) => {
+                    fetch(`${API_BASE_URL}/api/broadcasting/auth`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: JSON.stringify({
+                            socket_id: socketId,
+                            channel_name: channel.name
+                        })
+                    })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            callback(null, data);
+                        })
+                        .catch(error => {
+                            console.error('❌ Broadcasting auth xatosi:', error);
+                            callback(error, null);
+                        });
+                }
+            };
+        },
+
+        enabledTransports: ['ws', 'wss']
+    });
+
+    // Connection logging
+    window.Echo.connector.pusher.connection.bind('connected', () => {
+        console.log("✅ PUSHER: Connected");
+    });
+
+    window.Echo.connector.pusher.connection.bind('disconnected', () => {
+        console.log("🔴 PUSHER: Disconnected");
+    });
+
+    window.Echo.connector.pusher.connection.bind('error', (err) => {
+        console.error("❌ PUSHER Error:", err);
+    });
+
     return window.Echo;
 };
-initEcho();
-
 
 // ---------------------------------------------------------
-// MAIN COMPONENT: DuelGame (Router & Data Loaders)
+// YORDAMCHI FUNKSIYALAR
+// ---------------------------------------------------------
+const getInitials = (name) => {
+    if (!name) return '?';
+    const parts = name.trim().split(' ').filter(Boolean);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0][0].toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+const getAvatarColor = (name) => {
+    const colors = [
+        'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-pink-500',
+        'bg-indigo-500', 'bg-yellow-500', 'bg-red-500', 'bg-cyan-500',
+        'bg-teal-500', 'bg-orange-500',
+    ];
+
+    const hash = name.split('').reduce((acc, char) => {
+        return char.charCodeAt(0) + ((acc << 5) - acc);
+    }, 0);
+
+    return colors[Math.abs(hash) % colors.length];
+};
+
+// ---------------------------------------------------------
+// ASOSIY KOMPONENT
 // ---------------------------------------------------------
 const DuelGame = ({ onExit }) => {
     const [view, setView] = useState('list');
@@ -50,51 +137,56 @@ const DuelGame = ({ onExit }) => {
     const [selectedQuiz, setSelectedQuiz] = useState(null);
     const [opponent, setOpponent] = useState(null);
     const [currentUser, setCurrentUser] = useState(() => {
-        try { return JSON.parse(localStorage.getItem('user')); } catch (e) { return null; }
+        try {
+            return JSON.parse(localStorage.getItem('user'));
+        } catch (e) {
+            return null;
+        }
     });
 
     const [onlineUsers, setOnlineUsers] = useState({});
     const quizzesRef = useRef([]);
 
-
     useEffect(() => {
         quizzesRef.current = quizzes;
     }, [quizzes]);
 
-
-    // PUSHER KANALLARINI TINGLASH
+    // ✅ PUSHER KANALLARINI TINGLASH
     useEffect(() => {
-        initEcho();
-        if (!currentUser || !window.Echo) return;
+        if (!currentUser) {
+            console.warn('⚠️ CurrentUser mavjud emas');
+            return;
+        }
 
-        const privateChannel = window.Echo.private(`user.${currentUser.id}`);
+        // ✅ Echo faqat SHU YERDA yaratiladi
+        const echoInstance = initEcho();
 
-        // ✅ Presence Channel (Online status)
-        const presenceChannel = window.Echo.join('presence-online')
+        if (!echoInstance) {
+            console.error('❌ Echo yaratilmadi!');
+            return;
+        }
+
+        console.log('🎧 Kanallarni tinglash boshlandi...');
+
+        const privateChannel = echoInstance.private(`user.${currentUser.id}`);
+        const presenceChannel = echoInstance.join('presence-online')
             .here((members) => {
-                console.log('📋 Boshlang\'ich online foydalanuvchilar:', members);
-
+                console.log('📋 Online foydalanuvchilar:', members);
                 const initialOnline = members.reduce((acc, member) => {
-                    // ✅ Pusher ID ni tozalash va STRING qilish
                     const cleanId = String(member.id).trim();
                     acc[cleanId] = member.info || member;
-                    console.log(`✅ Online: ID=${cleanId}, Name=${member.info?.name || 'noma\'lum'}`);
                     return acc;
                 }, {});
-
                 setOnlineUsers(initialOnline);
             })
             .joining((member) => {
                 const cleanId = String(member.id).trim();
-                console.log(`🟢 Foydalanuvchi qo'shildi: ID=${cleanId}`);
-                setOnlineUsers(prev => ({
-                    ...prev,
-                    [cleanId]: member.info || member
-                }));
+                console.log(`🟢 Qo'shildi: ${cleanId}`);
+                setOnlineUsers(prev => ({ ...prev, [cleanId]: member.info || member }));
             })
             .leaving((member) => {
                 const cleanId = String(member.id).trim();
-                console.log(`🔴 Foydalanuvchi chiqdi: ID=${cleanId}`);
+                console.log(`🔴 Chiqdi: ${cleanId}`);
                 setOnlineUsers(prev => {
                     const newState = { ...prev };
                     delete newState[cleanId];
@@ -102,29 +194,24 @@ const DuelGame = ({ onExit }) => {
                 });
             });
 
-        // Duel Challenge listener
         privateChannel.listen('.DuelChallenge', (e) => {
             console.log('📨 Duel Challenge keldi:', e);
 
-            // ✅ Fan nomini topish
             const subjectName = quizzesRef.current
                 .find(q => q.subject.id === e.subjectId)
                 ?.subject.name || 'Noma\'lum';
 
             Swal.fire({
-                title: '⚔️ Duelga chaqiruv!',
-                html: `<span class="text-lg font-bold text-indigo-600">${e.challenger.first_name}</span> sizni jangga chorlamoqda!<br>Fan: <b>${subjectName}</b>`,
+                title: 'Duelga chaqiruv!',
+                html: `<span class="text-lg font-bold" style="color: #D97642;">${e.challenger.first_name}</span> sizni jangga chorlamoqda!<br>Fan: <b>${subjectName}</b>`,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonText: 'Qabul qilish',
                 cancelButtonText: 'Rad etish',
-                confirmButtonColor: '#4F46E5',
-                cancelButtonColor: '#EF4444',
-                background: '#1F2937',
-                color: '#fff'
+                confirmButtonColor: '#D97642',
+                cancelButtonColor: '#6B7280',
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // ✅ quizId va subjectId ni to'g'ri uzatish
                     acceptChallenge(e.challenger, e.quizId, e.subjectId);
                 }
             });
@@ -143,11 +230,8 @@ const DuelGame = ({ onExit }) => {
             const acceptedQuiz = quizzesRef.current.find(q => String(q.id) === String(e.quizId));
             setSelectedQuiz(acceptedQuiz || { id: String(e.quizId), subject: { id: String(e.subjectId) }, name: "Duel Quiz" });
             setOpponent(e.accepter);
-
-            // ✅ DARHOL o'yinga o'tish (Swal siz)
             setView('game');
 
-            // ✅ Xabarni keyinroq ko'rsatish
             setTimeout(() => {
                 Swal.fire({
                     title: 'Jang Boshlandi!',
@@ -158,47 +242,46 @@ const DuelGame = ({ onExit }) => {
                 });
             }, 500);
         });
+
         return () => {
             console.log('🔌 Kanallardan uzilish...');
-            window.Echo.leave('presence-online');
-            window.Echo.leave(`user.${currentUser.id}`);
+            echoInstance.leave('presence-online');
+            echoInstance.leave(`user.${currentUser.id}`);
         };
 
     }, [currentUser]);
 
-    // API Calls
     const sendChallenge = async (target) => {
         if (!selectedQuiz) return;
 
         const currentQuiz = selectedQuiz;
 
         try {
-            // ✅ 1. Loader dialogni ochish
+            console.log('🎯 Challenge yuborilmoqda:', {
+                target: target.name,
+                quiz: currentQuiz.name,
+                token: localStorage.getItem('token') ? 'Mavjud ✅' : 'YO\'Q ❌'
+            });
+
             Swal.fire({
                 title: 'Kutilmoqda...',
                 html: `<b>${target.name}</b> javobini kuting...`,
                 allowOutsideClick: false,
-                background: '#1F2937',
-                color: '#fff',
                 didOpen: () => Swal.showLoading()
             });
 
-            // ✅ 2. Timeout o'rnatish (30 soniya)
             const timeoutId = setTimeout(() => {
                 Swal.fire({
                     title: 'Vaqt tugadi',
                     text: 'Raqib javob bermadi',
                     icon: 'warning',
-                    background: '#1F2937',
-                    color: '#fff'
                 });
             }, 30000);
 
-            // ✅ 3. Global o'zgaruvchiga saqlash (DuelAccepted da bekor qilish uchun)
             window.duelChallengeTimeout = timeoutId;
 
             const token = localStorage.getItem('token');
-            await fetch(`${API_BASE_URL}/api/quiz/duel/challenge`, {
+            const response = await fetch(`${API_BASE_URL}/api/quiz/duel/challenge`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -211,13 +294,16 @@ const DuelGame = ({ onExit }) => {
                 })
             });
 
+            if (!response.ok) {
+                throw new Error('Network error');
+            }
+
             console.log('✅ Challenge yuborildi');
             setSelectedQuiz(currentQuiz);
 
         } catch (e) {
             console.error('❌ Xatolik:', e);
 
-            // ✅ Xatolik bo'lsa timeoutni bekor qilish
             if (window.duelChallengeTimeout) {
                 clearTimeout(window.duelChallengeTimeout);
                 delete window.duelChallengeTimeout;
@@ -227,18 +313,10 @@ const DuelGame = ({ onExit }) => {
         }
     };
 
-
     const acceptChallenge = async (challenger, quizId, subjectId) => {
         try {
             const token = localStorage.getItem('token');
 
-            console.log('📤 Accept qilish uchun yuborilayotgan ma\'lumotlar:', {
-                challenger_id: challenger.id,
-                quiz_id: quizId,
-                subject_id: subjectId
-            });
-
-            // ✅ quiz_id va subject_id ni ham yuborish
             const response = await fetch(`${API_BASE_URL}/api/quiz/duel/accept`, {
                 method: 'POST',
                 headers: {
@@ -247,15 +325,14 @@ const DuelGame = ({ onExit }) => {
                 },
                 body: JSON.stringify({
                     challenger_id: challenger.id,
-                    quiz_id: quizId,  // ✅ QO'SHILDI
-                    subject_id: subjectId  // ✅ QO'SHILDI
+                    quiz_id: quizId,
+                    subject_id: subjectId
                 })
             });
 
             const data = await response.json();
             console.log('✅ Accept response:', data);
 
-            // Quiz ma'lumotini topish
             const acceptedQuiz = quizzes.find(q => q.id === quizId);
 
             if (acceptedQuiz) {
@@ -278,7 +355,6 @@ const DuelGame = ({ onExit }) => {
         }
     };
 
-    // Data Loaders
     useEffect(() => {
         const load = async () => {
             setLoading(true);
@@ -305,13 +381,10 @@ const DuelGame = ({ onExit }) => {
                 if (qData.success) setQuizzes(qData.data);
 
                 if (cData.success) {
-                    // ✅ ID ni STRING ga o'girish va bo'sh joylarni o'chirish
                     const formattedClassmates = cData.data.map(c => ({
                         ...c,
-                        id: String(c.id).trim() // ⚠️ Muhim!
+                        id: String(c.id).trim()
                     }));
-
-                    console.log('👥 Sinfdoshlar ro\'yxati:', formattedClassmates);
                     setClassmates(formattedClassmates);
                 }
             } catch (e) {
@@ -323,30 +396,48 @@ const DuelGame = ({ onExit }) => {
         load();
     }, []);
 
-
     if (view === 'list') return (
-        <div className="min-h-screen bg-gray-900 p-6 font-sans text-gray-100">
+        <div className="min-h-screen bg-white p-4 sm:p-6 font-sans text-gray-900">
             <div className="max-w-6xl mx-auto">
-                <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
+                <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
                     <div>
-                        <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400 flex items-center gap-3">
-                            <Swords className="w-10 h-10 text-indigo-400" /> DUEL ARENASI
+                        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 flex items-center gap-3">
+                            <Swords className="w-8 h-8 sm:w-10 sm:h-10" style={{ color: '#D97642' }} />
+                            DUEL ARENASI
                         </h1>
-                        <p className="text-gray-400 mt-2">Bilimingizni sinash uchun maydon tanlang</p>
+                        <p className="text-gray-600 mt-2 text-sm sm:text-base">Bilimingizni sinash uchun maydon tanlang</p>
                     </div>
                     <div className="relative w-full md:w-72">
-                        <Search className="absolute left-3 top-3 text-gray-500 w-5 h-5" />
-                        <input type="text" placeholder="Qidirish..." className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-white transition-all" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                        <Search className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+                        <input
+                            type="text"
+                            placeholder="Qidirish..."
+                            className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-gray-900 transition-all"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
                     </div>
                 </div>
                 {loading ? <Loader /> : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                         {quizzes.filter(q => q.name.toLowerCase().includes(searchQuery.toLowerCase())).map(quiz => (
-                            <div key={quiz.id} onClick={() => { setSelectedQuiz(quiz); setView('opponent'); }} className="group bg-gray-800 p-6 rounded-2xl border border-gray-700 hover:border-indigo-500 hover:shadow-[0_0_20px_rgba(99,102,241,0.3)] cursor-pointer transition-all duration-300 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Zap className="w-24 h-24" /></div>
-                                <div className="flex justify-between mb-4"><span className="px-3 py-1 bg-indigo-500/20 text-indigo-300 rounded-lg text-xs font-bold uppercase">{quiz.subject.name}</span></div>
-                                <h3 className="text-xl font-bold mb-2 group-hover:text-indigo-400 transition-colors">{quiz.name}</h3>
-                                <p className="text-gray-500 text-sm flex items-center gap-2"><Clock className="w-4 h-4" /> {quiz.questions_count} ta savol</p>
+                            <div
+                                key={quiz.id}
+                                onClick={() => { setSelectedQuiz(quiz); setView('opponent'); }}
+                                className="group bg-white p-5 sm:p-6 rounded-xl border-2 border-gray-200 hover:border-orange-500 hover:shadow-lg cursor-pointer transition-all duration-300"
+                            >
+                                <div className="flex justify-between items-start mb-4">
+                                    <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-lg text-xs font-bold uppercase">
+                                        {quiz.subject.name}
+                                    </span>
+                                    <Zap className="w-6 h-6 text-orange-400 group-hover:text-orange-600 transition-colors" />
+                                </div>
+                                <h3 className="text-lg sm:text-xl font-bold mb-2 text-gray-900 group-hover:text-orange-600 transition-colors">
+                                    {quiz.name}
+                                </h3>
+                                <p className="text-gray-600 text-sm flex items-center gap-2">
+                                    <Clock className="w-4 h-4" /> {quiz.questions_count} ta savol
+                                </p>
                             </div>
                         ))}
                     </div>
@@ -359,27 +450,19 @@ const DuelGame = ({ onExit }) => {
         <div className="min-h-screen bg-gray-900 p-6 flex flex-col items-center justify-center text-white">
             <button
                 onClick={() => { setView('list'); setSelectedQuiz(null); }}
-                className="absolute top-6 left-6 flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
+                className="absolute top-6 left-6 flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+            >
                 <ArrowLeft className="w-5 h-5" /> Orqaga
             </button>
 
             <h2 className="text-3xl font-bold mb-2">Raqibni Tanlang</h2>
             <p className="text-gray-400 mb-10">Kim bilan kuch sinashmoqchisiz?</p>
 
-            {/* ✅ Debug panel */}
-            <div className="mb-4 p-4 bg-gray-800 rounded-lg text-xs text-gray-400 max-w-2xl">
-                <div><strong>Online foydalanuvchilar:</strong> {Object.keys(onlineUsers).join(', ') || 'Yo\'q'}</div>
-                <div><strong>Sinfdoshlar ID:</strong> {classmates.map(c => c.id).join(', ')}</div>
-            </div>
-
             {loading ? <Loader /> : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 max-w-5xl">
                     {classmates.map(student => {
-                        // ✅ ID ni tozalash
                         const studentIdString = String(student.id).trim();
                         const isOnline = !!onlineUsers[studentIdString];
-
-                        console.log(`🔍 Tekshiruv: Student ID=${studentIdString}, Online=${isOnline}`);
 
                         if (student.id === String(currentUser.id).trim()) return null;
 
@@ -388,21 +471,18 @@ const DuelGame = ({ onExit }) => {
                                 key={student.id}
                                 onClick={() => isOnline && sendChallenge(student)}
                                 className={`bg-gray-800 p-4 rounded-2xl border border-gray-700 transition-all text-center group shadow-lg 
-                                ${isOnline ? 'hover:border-indigo-500 hover:scale-105 cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
+                                    ${isOnline ? 'hover:border-indigo-500 hover:scale-105 cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
                             >
-                                <div className="w-20 aspect-square mx-auto mb-4 rounded-full bg-gray-700 overflow-hidden border-2 border-gray-600 group-hover:border-indigo-500 transition-colors flex items-center justify-center">
-                                    {student.avatar ? (
-                                        <img src={student.avatar} className="w-full h-full object-cover" alt={student.name} />
-                                    ) : (
-                                        <User className="w-16 h-16 text-gray-500" />
-                                    )}
+                                <div className={`w-20 h-20 mx-auto mb-4 rounded-full border-2 border-gray-600 group-hover:border-indigo-500 transition-colors flex items-center justify-center text-2xl font-black text-white ${getAvatarColor(student.name)}`}>
+                                    {getInitials(student.name)}
                                 </div>
 
-                                <h4 className="font-bold text-gray-200 group-hover:text-indigo-400 truncate">{student.name}</h4>
+                                <h4 className="font-bold text-gray-200 group-hover:text-indigo-400 truncate">
+                                    {student.name}
+                                </h4>
 
-                                {/* ✅ Online status */}
                                 <span className={`text-xs font-medium flex items-center justify-center gap-1 mt-1 
-                                ${isOnline ? 'text-green-400' : 'text-red-400'}`}>
+                                    ${isOnline ? 'text-green-400' : 'text-red-400'}`}>
                                     <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
                                     {isOnline ? 'Online' : 'Offline'}
                                 </span>
@@ -414,44 +494,35 @@ const DuelGame = ({ onExit }) => {
         </div>
     );
 
-    // DuelGame render calls ActiveGame
-    if (view === 'game') return (
-        <ActiveGame
-            quiz={selectedQuiz}
-            opponent={opponent}
-            currentUser={currentUser}
-            echo={window.Echo}
-            onBack={() => {
-                if (confirm("Chiqish?")) {
-                    setView('list');
-                    setOpponent(null);
-                    setSelectedQuiz(null);
-                }
-            }}
-        />
-    );
+    return <ActiveGame
+        quiz={selectedQuiz}
+        opponent={opponent}
+        currentUser={currentUser}
+        echo={window.Echo}
+        onBack={() => {
+            if (window.confirm("Chiqish?")) {
+                setView('list');
+                setOpponent(null);
+            }
+        }}
+    />;
 };
 
-
 // ---------------------------------------------------------
-// ACTIVE GAME (HAMMASI BOG'LANGAN)
+// ACTIVE GAME
 // ---------------------------------------------------------
 const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
-    // STATE
     const [questions, setQuestions] = useState([]);
     const [currIdx, setCurrIdx] = useState(0);
     const [gameState, setGameState] = useState('intro');
 
-    // Ballar
     const [myScore, setMyScore] = useState(0);
     const [oppScore, setOppScore] = useState(0);
 
-    // UI Statuslar
     const [locked, setLocked] = useState(false);
     const [myAnswer, setMyAnswer] = useState(null);
     const [oppAnswer, setOppAnswer] = useState(null);
 
-    // MANTIQ UCHUN JONLI XOTIRA (REFS)
     const questionsRef = useRef([]);
     const currIdxRef = useRef(0);
     const isRoundOver = useRef(false);
@@ -459,11 +530,9 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
     const correctSfx = useRef(new Audio('/assets/audio/Water_Lily.mp3'));
     const oppName = opponent?.short_name || opponent?.name || "Raqib";
 
-    // Reflarni State bilan sinxronlash
     useEffect(() => { questionsRef.current = questions; }, [questions]);
     useEffect(() => { currIdxRef.current = currIdx; }, [currIdx]);
 
-    // 1. SIGNAL TINGLASH (PUSHER)
     useEffect(() => {
         if (!echo || !currentUser) return;
         const channel = echo.private(`user.${currentUser.id}`);
@@ -473,7 +542,6 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
                 setLocked(true);
                 isRoundOver.current = true;
 
-                // Ballarni yangilash
                 const isMe = e.data.actor_id === currentUser.id;
                 const isCorrect = e.data.isCorrect;
 
@@ -491,20 +559,17 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
                     else setOppAnswer('wrong');
                 }
 
-                // Xabar chiqarish
                 const actorName = isMe ? "Siz" : oppName;
                 Swal.fire({
                     title: `${actorName} birinchi bo'ldi!`,
-                    text: isCorrect ? "To'g'ri topdi ✅" : "Xato qildi ❌",
+                    text: isCorrect ? "To'g'ri topdi" : "Xato qildi",
                     icon: isCorrect ? 'success' : 'error',
                     timer: 1500,
                     showConfirmButton: false,
                     toast: true,
                     position: 'top-end',
-                    background: '#1F2937', color: '#fff'
                 });
 
-                // Keyingi savolga o'tish
                 setTimeout(() => {
                     const totalQuestions = questionsRef.current.length;
                     const current = currIdxRef.current;
@@ -521,16 +586,13 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
         return () => { channel.stopListening('.DuelGameState'); };
     }, [echo, currentUser, oppName]);
 
-    // 2. SAVOLLARNI YUKLASH
     useEffect(() => {
-        // ✅ 1. Qaramlikni (dependency) tekshirish: Agar quiz mavjud bo'lmasa, funksiyadan chiqing
         if (!quiz || !quiz.id || !quiz.subject || !quiz.subject.id) {
             return;
         }
 
         const loadQ = async () => {
             try {
-                // Bu yerda quiz.subject.id va quiz.id qiymatlari aniq mavjud
                 const res = await fetch(`${API_BASE_URL}/api/quiz/${quiz.subject.id}/${quiz.id}/duel`, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Accept': 'application/json' }
                 });
@@ -556,14 +618,12 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
 
     }, [quiz]);
 
-    // 3. TIMER (INTRO)
     useEffect(() => {
         if (questions.length > 0 && gameState === 'intro') {
             setTimeout(() => setGameState('playing'), 3000);
         }
     }, [questions, gameState]);
 
-    // SERVERGA YUBORISH
     const broadcastState = async (type, data) => {
         try {
             await fetch(`${API_BASE_URL}/api/quiz/duel/state`, {
@@ -578,7 +638,6 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
         } catch (e) { console.error(e); }
     };
 
-    // TUGMA BOSILGANDA
     const handleAnswer = (opt) => {
         if (locked || isRoundOver.current) return;
 
@@ -588,7 +647,6 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
         broadcastState('answer', { isCorrect: opt.isCorrect });
     };
 
-    // KEYINGI SAVOLGA O'TISH FUNKSIYASI
     const handleNextQuestion = () => {
         setMyAnswer(null);
         setOppAnswer(null);
@@ -598,12 +656,17 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
         setCurrIdx(prev => prev + 1);
     };
 
-    // --- RENDER ---
-    if (questions.length === 0) return <div className="h-screen bg-gray-900 flex items-center justify-center text-indigo-500"><Loader2 className="w-12 h-12 animate-spin" /></div>;
+    if (questions.length === 0) return (
+        <div className="h-screen bg-white flex items-center justify-center" style={{ color: '#D97642' }}>
+            <Loader2 className="w-12 h-12 animate-spin" />
+        </div>
+    );
 
     if (gameState === 'intro') return (
-        <div className="h-screen bg-gray-900 flex items-center justify-center text-white">
-            <h1 className="text-6xl font-black text-yellow-500 animate-pulse">TAYYORLANING...</h1>
+        <div className="h-screen bg-white flex items-center justify-center text-gray-900">
+            <h1 className="text-4xl sm:text-6xl font-black animate-pulse" style={{ color: '#D97642' }}>
+                TAYYORLANING...
+            </h1>
         </div>
     );
 
@@ -611,17 +674,30 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
         const iWon = myScore > oppScore;
         const isDraw = myScore === oppScore;
         return (
-            <div className="h-screen bg-gray-900 flex items-center justify-center text-white relative">
-                <div className="absolute inset-0 bg-[url('/assets/img/grid.svg')] opacity-10"></div>
-                <div className="bg-gray-800 p-12 rounded-3xl text-center border border-gray-700 shadow-2xl relative z-10 w-full max-w-lg">
-                    {iWon ? <Trophy className="w-24 h-24 mx-auto mb-6 text-yellow-400 animate-bounce" /> : isDraw ? <Swords className="w-24 h-24 mx-auto mb-6 text-blue-400" /> : <Trophy className="w-24 h-24 mx-auto mb-6 text-gray-600 grayscale" />}
-                    <h2 className={`text-5xl font-black mb-2 ${iWon ? 'text-yellow-400' : isDraw ? 'text-blue-400' : 'text-gray-400'}`}>
+            <div className="h-screen bg-white flex items-center justify-center text-gray-900 p-4">
+                <div className="bg-white p-8 sm:p-12 rounded-2xl text-center border-2 border-gray-200 shadow-xl w-full max-w-lg">
+                    {iWon ? (
+                        <Trophy className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-6 animate-bounce" style={{ color: '#D97642' }} />
+                    ) : isDraw ? (
+                        <Swords className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-6" style={{ color: '#D97642' }} />
+                    ) : (
+                        <Trophy className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-6 text-gray-400" />
+                    )}
+                    <h2 className={`text-3xl sm:text-5xl font-black mb-2 ${iWon ? 'text-orange-600' : isDraw ? 'text-orange-500' : 'text-gray-500'}`}>
                         {iWon ? "G'ALABA!" : isDraw ? "DURANG" : "MAG'LUBIYAT"}
                     </h2>
-                    <div className="flex justify-center gap-6 my-6 text-4xl font-bold">
-                        <span className="text-blue-400">{myScore}</span> : <span className="text-red-400">{oppScore}</span>
+                    <div className="flex justify-center gap-6 my-6 text-3xl sm:text-4xl font-bold">
+                        <span style={{ color: '#D97642' }}>{myScore}</span>
+                        <span className="text-gray-400">:</span>
+                        <span className="text-gray-600">{oppScore}</span>
                     </div>
-                    <button onClick={onBack} className="w-full py-4 bg-indigo-600 rounded-xl font-bold hover:bg-indigo-700">Chiqish</button>
+                    <button
+                        onClick={onBack}
+                        className="w-full py-3 sm:py-4 rounded-lg font-bold text-white hover:opacity-90 transition-opacity"
+                        style={{ backgroundColor: '#D97642' }}
+                    >
+                        Chiqish
+                    </button>
                 </div>
             </div>
         );
@@ -629,44 +705,74 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
 
     const q = questions[currIdx];
     return (
-        <div className="h-screen flex flex-col bg-gray-900 overflow-hidden select-none font-sans text-white">
-            <div className="h-20 bg-gray-800 border-b border-gray-700 flex justify-between items-center px-8">
-                <div><div className="text-gray-400 text-xs font-bold">SIZ</div><div className="text-2xl font-black">{myScore}</div></div>
-                <div className="bg-gray-700 px-4 py-1 rounded-full font-bold">{currIdx + 1} / {questions.length}</div>
-                <div className="text-right"><div className="text-gray-400 text-xs font-bold">{oppName}</div><div className="text-2xl font-black">{oppScore}</div></div>
+        <div className="h-screen flex flex-col bg-white overflow-hidden select-none font-sans text-gray-900">
+            <div className="h-16 sm:h-20 bg-white border-b-2 border-gray-200 flex justify-between items-center px-4 sm:px-8">
+                <div>
+                    <div className="text-gray-600 text-xs font-bold">SIZ</div>
+                    <div className="text-xl sm:text-2xl font-black" style={{ color: '#D97642' }}>{myScore}</div>
+                </div>
+                <div className="bg-gray-100 px-3 sm:px-4 py-1 rounded-full font-bold text-sm sm:text-base">
+                    {currIdx + 1} / {questions.length}
+                </div>
+                <div className="text-right">
+                    <div className="text-gray-600 text-xs font-bold">{oppName}</div>
+                    <div className="text-xl sm:text-2xl font-black text-gray-700">{oppScore}</div>
+                </div>
             </div>
 
-            <div className="w-full h-1 bg-gray-800"><div className="h-full bg-indigo-500 transition-all duration-500" style={{ width: `${((currIdx + 1) / questions.length) * 100}%` }}></div></div>
+            <div className="w-full h-1 bg-gray-200">
+                <div
+                    className="h-full transition-all duration-500"
+                    style={{ width: `${((currIdx + 1) / questions.length) * 100}%`, backgroundColor: '#D97642' }}
+                ></div>
+            </div>
 
-            <div className="flex-1 flex flex-col justify-center items-center p-6 max-w-5xl mx-auto w-full">
-                <div className="mb-10 text-center"><MathText className="text-3xl font-black">{q.question}</MathText></div>
+            <div className="flex-1 flex flex-col justify-center items-center p-4 sm:p-6 max-w-5xl mx-auto w-full overflow-y-auto">
+                <div className="mb-6 sm:mb-10 text-center px-2">
+                    <MathText className="text-xl sm:text-3xl font-bold text-gray-900">{q.question}</MathText>
+                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 w-full">
                     {q.options.map((opt, idx) => {
-                        let statusClass = "bg-gray-800 border-gray-700 hover:bg-gray-700";
+                        let statusClass = "bg-white border-gray-300 hover:bg-gray-50";
                         if (locked) {
-                            if (myAnswer === 'correct' && opt.isCorrect) statusClass = "bg-green-600 border-green-500";
-                            else if (myAnswer === 'wrong' && !opt.isCorrect) statusClass = "bg-red-600 border-red-500";
-                            else if (oppAnswer === 'correct' && opt.isCorrect) statusClass = "bg-yellow-600 border-yellow-500 animate-pulse";
-                            else statusClass = "bg-gray-800 opacity-30 grayscale";
+                            if (myAnswer === 'correct' && opt.isCorrect) statusClass = "bg-green-50 border-green-500";
+                            else if (myAnswer === 'wrong' && !opt.isCorrect) statusClass = "bg-red-50 border-red-500";
+                            else if (oppAnswer === 'correct' && opt.isCorrect) statusClass = "bg-orange-50 border-orange-500";
+                            else statusClass = "bg-gray-50 opacity-50 border-gray-200";
                         }
 
                         return (
-                            <button key={idx} onClick={() => handleAnswer(opt)} disabled={locked || isRoundOver.current} className={`p-6 rounded-2xl border-2 text-left transition-all ${statusClass} ${(!locked && !isRoundOver.current) && 'hover:scale-[1.02] hover:border-gray-500'}`}>
-                                <div className="flex items-center gap-4">
-                                    <span className="font-bold text-gray-400">{['A', 'B', 'C', 'D'][idx]}</span>
-                                    <span className="font-bold text-lg"><MathText>{opt.text}</MathText></span>
+                            <button
+                                key={idx}
+                                onClick={() => handleAnswer(opt)}
+                                disabled={locked || isRoundOver.current}
+                                className={`p-4 sm:p-6 rounded-xl border-2 text-left transition-all ${statusClass} ${(!locked && !isRoundOver.current) && 'hover:border-orange-500'}`}
+                            >
+                                <div className="flex items-center gap-3 sm:gap-4">
+                                    <span className="font-bold text-gray-600 text-sm sm:text-base">{['A', 'B', 'C', 'D'][idx]}</span>
+                                    <span className="font-bold text-base sm:text-lg text-gray-900">
+                                        <MathText>{opt.text}</MathText>
+                                    </span>
                                 </div>
                             </button>
                         );
                     })}
                 </div>
-                {(locked || isRoundOver.current) && <div className="mt-8 text-indigo-400 animate-pulse font-bold">Javob tekshirilmoqda...</div>}
+                {(locked || isRoundOver.current) && (
+                    <div className="mt-8 font-bold animate-pulse" style={{ color: '#D97642' }}>
+                        Javob tekshirilmoqda...
+                    </div>
+                )}
             </div>
         </div>
     );
 };
 
-const Loader = () => <div className="flex justify-center items-center h-64 text-indigo-500"><Loader2 className="w-10 h-10 animate-spin" /></div>;
+const Loader = () => (
+    <div className="flex justify-center items-center h-64" style={{ color: '#D97642' }}>
+        <Loader2 className="w-10 h-10 animate-spin" />
+    </div>
+);
 
 export default DuelGame;

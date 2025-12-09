@@ -2,10 +2,6 @@ import React, { useState } from 'react';
 import { User, Lock, Eye, EyeOff, LogIn, Loader2, AlertCircle } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
 
-// ==========================================
-// ⚙️ SOZLAMALAR (CONFIG)
-// ==========================================
-
 function Login({ onLoginSuccess }) {
     const [formData, setFormData] = useState({
         username: '',
@@ -30,11 +26,25 @@ function Login({ onLoginSuccess }) {
         setError('');
 
         try {
+            // ✅ 1-QADAM: CSRF cookie olish
+            await fetch(`${API_BASE_URL}/sanctum/csrf-cookie`, {
+                method: 'GET',
+                credentials: 'include', // ✅ MUHIM: Cookie almashish uchun
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            console.log('✅ CSRF cookie olindi');
+
+            // ✅ 2-QADAM: Login so'rovi
             const response = await fetch(`${API_BASE_URL}/api/login`, {
                 method: 'POST',
+                credentials: 'include', // ✅ MUHIM: Session cookie yuborish uchun
                 headers: {
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest' // ✅ Laravel uchun muhim
                 },
                 body: JSON.stringify({
                     username: formData.username,
@@ -43,16 +53,14 @@ function Login({ onLoginSuccess }) {
             });
 
             const data = await response.json();
+            console.log('📥 Login response:', data);
 
             if (data.token && data.user) {
                 // localStorage ga saqlash
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
-                
-                // Sinf ma'lumotini tekshirish (ixtiyoriy log)
-                if (data.user.class) {
-                    console.log('User sinfi:', data.user.class.name);
-                }
+
+                console.log('✅ Login muvaffaqiyatli:', data.user.name);
 
                 // Parent componentga yuborish
                 if (onLoginSuccess) {
@@ -62,7 +70,7 @@ function Login({ onLoginSuccess }) {
                 setError(data.message || 'Login yoki parol noto\'g\'ri!');
             }
         } catch (err) {
-            console.error('Login Error:', err);
+            console.error('❌ Login Error:', err);
             setError('Server bilan bog\'lanishda xatolik yuz berdi.');
         } finally {
             setLoading(false);
@@ -121,7 +129,7 @@ function Login({ onLoginSuccess }) {
                                 required
                             />
                             <Lock className="w-5 h-5 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 group-focus-within:text-orange-500 transition-colors" />
-                            
+
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
@@ -144,11 +152,11 @@ function Login({ onLoginSuccess }) {
                                     className="peer sr-only"
                                 />
                                 <div className="w-5 h-5 border-2 border-gray-300 rounded transition-colors peer-checked:bg-orange-500 peer-checked:border-orange-500 peer-focus:ring-2 peer-focus:ring-orange-200"></div>
-                                <svg 
-                                    className="absolute w-3 h-3 text-white hidden peer-checked:block left-1 top-1 pointer-events-none" 
-                                    fill="none" 
-                                    viewBox="0 0 24 24" 
-                                    stroke="currentColor" 
+                                <svg
+                                    className="absolute w-3 h-3 text-white hidden peer-checked:block left-1 top-1 pointer-events-none"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
                                     strokeWidth="3"
                                 >
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
