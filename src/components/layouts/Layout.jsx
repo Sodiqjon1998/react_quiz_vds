@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import Dashboard from '../dashboard/Dashboard';
-import Darslar from '../pages/Darslar';
-import Topshiriqlar from '../pages/Topshiriqlar';
 import QuizPage from '../quiz/QuizPage';
 import DuelGame from '../quiz/DuelGame';
 import Kitobxonlik from '../pages/Kitobxonlik';
