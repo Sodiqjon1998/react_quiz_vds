@@ -1,7 +1,7 @@
 import React from 'react'
 import { useState, useEffect } from 'react'
 import Login from "./components/logins/Login.jsx";
-import Layout from './components/layout/Layout'
+import Layout from './components/layouts/Layout.jsx'
 
 function App() {
   const [user, setUser] = useState(null);
