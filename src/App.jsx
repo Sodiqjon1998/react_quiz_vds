@@ -1,6 +1,6 @@
 import React from 'react'
 import { useState, useEffect } from 'react'
-import Login from "./components/login/Login.jsx";
+import Login from "./components/logins/Login.jsx";
 import Layout from './components/layout/Layout'
 
 function App() {
