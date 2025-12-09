@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import Sidebar from './Sidebar';
-import Navbar from './Navbar';
-import Dashboard from '../dashboard/Dashboard';
-import QuizPage from '../quiz/QuizPage';
-import DuelGame from '../quiz/DuelGame';
-import Kitobxonlik from '../pages/Kitobxonlik';
-import KunlikVazifalar from '../pages/KunlikVazifalar';
-import Profile from '../pages/Profile';
+import Sidebar from './Sidebar.jsx';
+import Navbar from './Navbar.jsx';
+import Dashboard from '../dashboard/Dashboard.jsx';
+import QuizPage from '../quiz/QuizPage.jsx';
+import DuelGame from '../quiz/DuelGame.jsx';
+import Kitobxonlik from '../pages/Kitobxonlik.jsx';
+import KunlikVazifalar from '../pages/KunlikVazifalar.jsx';
+import Profile from '../pages/Profile.jsx';
 
 function Layout({ user, onLogout }) {
     const [currentPage, setCurrentPage] = useState('dashboard');
