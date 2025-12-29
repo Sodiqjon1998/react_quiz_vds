@@ -54,33 +54,132 @@ function QuizPage({ quizId, subjectId, onBack }) {
         }
     }, [quizId]);
 
-    // Faqat 5 sekundda bir marta saqlash
+    // ✅ SERVER GA SAQLASH (Yangi funksiya)
+    const saveStateToServer = useCallback(async () => {
+        if (!quizId || isSubmitting) return;
+
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_BASE_URL}/api/student/quiz/save-state`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    quizId: quizId,
+                    currentQuestionIndex: currentQuestionIndex,
+                    remainingTime: timeLeft,
+                    userAnswers: answers,
+                    questionStatuses: markedForReview
+                })
+            });
+
+            const data = await response.json();
+            if (data.status === 'success') {
+                console.log('✅ Holat serverga saqlandi');
+            }
+        } catch (error) {
+            console.error('❌ Server ga saqlashda xatolik:', error);
+            // LocalStorage ga backup sifatida saqlash
+            saveState();
+        }
+    }, [quizId, answers, markedForReview, currentQuestionIndex, timeLeft, isSubmitting, saveState]);
+
+    // ✅ SERVER DAN YUKLASH (Yangi funksiya)
+    const loadStateFromServer = useCallback(async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(
+                `${API_BASE_URL}/api/student/quiz/${quizId}/get-state`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    }
+                }
+            );
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                // Server dan yuklash
+                setAnswers(data.userAnswers || {});
+                setMarkedForReview(data.questionStatuses || {});
+                setCurrentQuestionIndex(data.currentQuestionIndex || 0);
+
+                // Vaqtni to'g'ri hisoblash
+                if (data.remainingTime > 0) {
+                    setTimeLeft(data.remainingTime);
+                }
+
+                console.log('✅ Holat serverdan yuklandi');
+                return true;
+            }
+        } catch (error) {
+            console.error('❌ Server dan yuklashda xatolik:', error);
+        }
+        return false;
+    }, [quizId]);
+
+    // ✅ AUTO-SAVE: Har 10 sekundda server va localStorage ga saqlash
     useEffect(() => {
         const interval = setInterval(() => {
-            if (!loading && questions.length > 0) {
-                saveState();
+            if (!loading && questions.length > 0 && !isSubmitting) {
+                saveStateToServer(); // Server ga saqlash
+                saveState(); // LocalStorage ga backup
             }
-        }, 5000); // 5 sekund
+        }, 10000); // 10 sekund
 
         return () => clearInterval(interval);
-    }, [answers, markedForReview, currentQuestionIndex, timeLeft]);
+    }, [answers, markedForReview, currentQuestionIndex, timeLeft, loading, isSubmitting, saveStateToServer, saveState]);
 
+    // ✅ TIMER: Har sekundda vaqtni kamaytirish va har 10 sekundda saqlash
     useEffect(() => {
         if (timeLeft <= 0 || loading || questions.length === 0) return;
 
         const timer = setInterval(() => {
             setTimeLeft(prev => {
-                if (prev <= 1) {
+                const newTime = prev - 1;
+
+                // Har 10 sekundda saqlash
+                if (newTime % 10 === 0 && newTime > 0) {
+                    saveStateToServer();
+                    saveState();
+                }
+
+                if (newTime <= 0) {
                     clearInterval(timer);
                     handleSubmit();
                     return 0;
                 }
-                return prev - 1;
+
+                return newTime;
             });
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [timeLeft, loading, questions.length]);
+    }, [timeLeft, loading, questions.length, saveStateToServer, saveState]);
+
+    // ✅ SAHIFA YOPILISHIDA OGOHLANTIRISH VA SAQLASH
+    useEffect(() => {
+        const handleBeforeUnload = (e) => {
+            if (questions.length > 0 && !isSubmitting) {
+                // Oxirgi marta saqlash
+                saveStateToServer();
+                saveState();
+
+                // Ogohlantirish
+                e.preventDefault();
+                e.returnValue = 'Test yakunlanmagan! Chiqsangiz javoblaringiz saqlanadi.';
+                return e.returnValue;
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [questions, isSubmitting, saveStateToServer, saveState]);
 
     const startQuiz = async () => {
         try {
@@ -116,25 +215,32 @@ function QuizPage({ quizId, subjectId, onBack }) {
                 const totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
                 setTimeLeft(totalSeconds);
 
-                const savedState = localStorage.getItem(`quiz_progress_${quizId}`);
-                if (savedState) {
-                    try {
-                        const parsedState = JSON.parse(savedState);
-                        setAnswers(parsedState.answers || {});
-                        setMarkedForReview(parsedState.markedForReview || {});
+                // ✅ MUHIM: Avval server dan yuklash
+                const loadedFromServer = await loadStateFromServer();
 
-                        if (parsedState.currentQuestionIndex < data.data.questions.length) {
-                            setCurrentQuestionIndex(parsedState.currentQuestionIndex || 0);
-                        } else {
-                            setCurrentQuestionIndex(0);
-                        }
+                // Agar serverda yo'q bo'lsa, localStorage dan yuklash (backup)
+                if (!loadedFromServer) {
+                    const savedState = localStorage.getItem(`quiz_progress_${quizId}`);
+                    if (savedState) {
+                        try {
+                            const parsedState = JSON.parse(savedState);
+                            setAnswers(parsedState.answers || {});
+                            setMarkedForReview(parsedState.markedForReview || {});
 
-                        if (parsedState.timeLeft > 0) {
-                            setTimeLeft(parsedState.timeLeft);
+                            if (parsedState.currentQuestionIndex < processedQuestions.length) {
+                                setCurrentQuestionIndex(parsedState.currentQuestionIndex || 0);
+                            } else {
+                                setCurrentQuestionIndex(0);
+                            }
+
+                            if (parsedState.timeLeft > 0) {
+                                setTimeLeft(parsedState.timeLeft);
+                            }
+                            console.log('✅ Holat localStorage dan yuklandi (backup)');
+                        } catch (e) {
+                            console.error("LocalStorage dan yuklashda xatolik:", e);
+                            localStorage.removeItem(`quiz_progress_${quizId}`);
                         }
-                    } catch (e) {
-                        console.error("Saqlangan progressni yuklashda xatolik:", e);
-                        localStorage.removeItem(`quiz_progress_${quizId}`);
                     }
                 }
 
@@ -154,10 +260,20 @@ function QuizPage({ quizId, subjectId, onBack }) {
     }, [quizId]);
 
     const handleAnswerSelect = (questionId, optionId) => {
-        setAnswers(prev => ({
-            ...prev,
-            [questionId]: optionId
-        }));
+        setAnswers(prev => {
+            const newAnswers = {
+                ...prev,
+                [questionId]: optionId
+            };
+
+            // ✅ Javob tanlanganda darhol saqlash
+            setTimeout(() => {
+                saveStateToServer();
+                saveState();
+            }, 500);
+
+            return newAnswers;
+        });
     };
 
     const toggleMarkForReview = (questionId) => {
@@ -210,7 +326,27 @@ function QuizPage({ quizId, subjectId, onBack }) {
             }
 
             if (data.success) {
+                // ✅ LocalStorage dan tozalash
                 clearState();
+
+                // ✅ Server dan ham tozalash
+                try {
+                    await fetch(`${API_BASE_URL}/api/student/quiz/clear-state`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            quizId: quizId,
+                            clearState: true
+                        })
+                    });
+                    console.log('✅ Server holati tozalandi');
+                } catch (e) {
+                    console.error('❌ Server holatni tozalashda xatolik:', e);
+                }
 
                 if (data.data.detailed_results) {
                     data.data.detailed_results = data.data.detailed_results.map(result => ({

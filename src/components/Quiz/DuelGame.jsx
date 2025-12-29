@@ -13,9 +13,7 @@ import { API_BASE_URL } from '../../config';
 // ---------------------------------------------------------
 window.Pusher = Pusher;
 
-// ✅ TUZATILDI: Bu funksiya faqat kerak bo'lganda chaqiriladi
 const initEcho = () => {
-    // Agar Echo allaqachon mavjud va ulangan bo'lsa, uni qaytaramiz
     if (window.Echo) {
         const state = window.Echo.connector?.pusher?.connection?.state;
         if (state === 'connected' || state === 'connecting') {
@@ -26,17 +24,25 @@ const initEcho = () => {
 
     const token = localStorage.getItem('token');
     if (!token) {
-        console.error('❌ Token topilmadi! Login qiling.');
+        console.error('❌ Token topilmadi!');
         return null;
     }
 
     console.log('🔧 Yangi Echo instance yaratilmoqda...');
 
+    // ✅ PUSHER CLOUD (Ishonchli va oson)
     window.Echo = new Echo({
         broadcaster: 'pusher',
-        key: 'bd72b3eabbe0fb9d1258',
-        cluster: 'ap1',
+        key: '5a6dd1db7c4788e06a7b', // ✅ Yangi Pusher key
+        cluster: 'ap2', // ✅ Asia Pacific (Singapore)
+
+        // ✅ Pusher cloud WebSocket
         forceTLS: true,
+        encrypted: true,
+        enabledTransports: ['ws', 'wss'],
+        disableStats: true, // ✅ AdBlock xatosini oldini olish
+
+        // ✅ Auth endpoint (Railway URL bilan)
         authEndpoint: `${API_BASE_URL}/api/broadcasting/auth`,
 
         auth: {
@@ -48,9 +54,12 @@ const initEcho = () => {
             }
         },
 
+        // ✅ Custom authorizer
         authorizer: (channel, options) => {
             return {
                 authorize: (socketId, callback) => {
+                    console.log('🔐 Authorizing channel:', channel.name, 'socket:', socketId);
+
                     fetch(`${API_BASE_URL}/api/broadcasting/auth`, {
                         method: 'POST',
                         headers: {
@@ -65,12 +74,14 @@ const initEcho = () => {
                         })
                     })
                         .then(response => {
+                            console.log('📥 Auth response status:', response.status);
                             if (!response.ok) {
                                 throw new Error(`HTTP ${response.status}`);
                             }
                             return response.json();
                         })
                         .then(data => {
+                            console.log('✅ Auth muvaffaqiyatli:', data);
                             callback(null, data);
                         })
                         .catch(error => {
@@ -80,13 +91,12 @@ const initEcho = () => {
                 }
             };
         },
-
-        enabledTransports: ['ws', 'wss']
     });
 
-    // Connection logging
+    // ✅ Connection event listeners
     window.Echo.connector.pusher.connection.bind('connected', () => {
         console.log("✅ PUSHER: Connected");
+        console.log("🔌 Socket ID:", window.Echo.socketId());
     });
 
     window.Echo.connector.pusher.connection.bind('disconnected', () => {
@@ -95,6 +105,10 @@ const initEcho = () => {
 
     window.Echo.connector.pusher.connection.bind('error', (err) => {
         console.error("❌ PUSHER Error:", err);
+    });
+
+    window.Echo.connector.pusher.connection.bind('state_change', (states) => {
+        console.log("🔄 Pusher state:", states.previous, '→', states.current);
     });
 
     return window.Echo;
@@ -196,9 +210,20 @@ const DuelGame = ({ onExit }) => {
 
         privateChannel.listen('.DuelChallenge', (e) => {
             console.log('📨 Duel Challenge keldi:', e);
+            console.log('📦 Event ma\'lumotlari:', {
+                challenger: e.challenger,
+                quizId: e.quizId,
+                subjectId: e.subjectId
+            });
+
+            // ✅ Agar ma'lumotlar to'liq kelmasa
+            if (!e.challenger || !e.quizId || !e.subjectId) {
+                console.error('❌ Event ma\'lumotlari to\'liq emas!');
+                return;
+            }
 
             const subjectName = quizzesRef.current
-                .find(q => q.subject.id === e.subjectId)
+                .find(q => String(q.subject.id) === String(e.subjectId))
                 ?.subject.name || 'Noma\'lum';
 
             Swal.fire({
