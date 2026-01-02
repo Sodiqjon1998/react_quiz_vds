@@ -107,6 +107,7 @@ const initEcho = () => {
         console.error("❌ PUSHER Error:", err);
     });
 
+
     window.Echo.connector.pusher.connection.bind('state_change', (states) => {
         console.log("🔄 Pusher state:", states.previous, '→', states.current);
     });
@@ -338,6 +339,7 @@ const DuelGame = ({ onExit }) => {
         }
     };
 
+
     const acceptChallenge = async (challenger, quizId, subjectId) => {
         try {
             const token = localStorage.getItem('token');
@@ -421,6 +423,7 @@ const DuelGame = ({ onExit }) => {
         load();
     }, []);
 
+
     if (view === 'list') return (
         <div className="min-h-screen bg-white p-4 sm:p-6 font-sans text-gray-900">
             <div className="max-w-6xl mx-auto">
@@ -482,6 +485,7 @@ const DuelGame = ({ onExit }) => {
 
             <h2 className="text-3xl font-bold mb-2">Raqibni Tanlang</h2>
             <p className="text-gray-400 mb-10">Kim bilan kuch sinashmoqchisiz?</p>
+
 
             {loading ? <Loader /> : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 max-w-5xl">
@@ -569,6 +573,7 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
 
                 const isMe = e.data.actor_id === currentUser.id;
                 const isCorrect = e.data.isCorrect;
+
 
                 if (isCorrect) {
                     if (isMe) {
@@ -687,6 +692,7 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
         </div>
     );
 
+
     if (gameState === 'intro') return (
         <div className="h-screen bg-white flex items-center justify-center text-gray-900">
             <h1 className="text-4xl sm:text-6xl font-black animate-pulse" style={{ color: '#D97642' }}>
@@ -757,6 +763,7 @@ const ActiveGame = ({ quiz, opponent, currentUser, echo, onBack }) => {
                     <MathText className="text-xl sm:text-3xl font-bold text-gray-900">{q.question}</MathText>
                 </div>
 
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 w-full">
                     {q.options.map((opt, idx) => {
                         let statusClass = "bg-white border-gray-300 hover:bg-gray-50";
@@ -801,3 +808,4 @@ const Loader = () => (
 );
 
 export default DuelGame;
+
