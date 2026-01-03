@@ -67,8 +67,11 @@ const Leaderboard = () => {
             <div className="mb-4 pb-3" style={{ borderBottom: `3px solid ${BRAND_COLOR}` }}>
                 <div className="d-flex align-items-center justify-content-between flex-wrap">
                     <div>
-                        <h2 style={{ color: '#333', fontWeight: '600' }}>🏆 Sinfim Reytinglari</h2>
-                        <p className="text-muted mb-0">
+                        <div className="d-flex align-items-center gap-2">
+                            <Trophy size={28} style={{ color: BRAND_COLOR }} />
+                            <h2 className="mb-0" style={{ color: '#333', fontWeight: '600' }}>Sinfim Reytinglari</h2>
+                        </div>
+                        <p className="text-muted mb-0 mt-2">
                             <Users size={16} className="me-1" />
                             Jami {totalStudents} o'quvchi
                         </p>
@@ -117,7 +120,7 @@ const Leaderboard = () => {
                             <div className="card-body text-center pt-4" style={{ backgroundColor: BRAND_LIGHT }}>
                                 {getMedalIcon(1)}
                                 <h3 className="mt-3 mb-2" style={{ color: BRAND_COLOR, fontWeight: '700' }}>
-                                    👑 {rankings[0].name}
+                                    {rankings[0].name}
                                 </h3>
                                 <div
                                     className="badge mb-2"

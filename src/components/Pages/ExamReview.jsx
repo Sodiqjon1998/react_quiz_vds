@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, AlertCircle, FileText } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
 
 const ExamReview = ({ examId, onClose }) => {
@@ -62,7 +62,10 @@ const ExamReview = ({ examId, onClose }) => {
                 </button>
 
                 <div className="pb-3" style={{ borderBottom: `3px solid ${BRAND_COLOR}` }}>
-                    <h2 style={{ color: '#333', fontWeight: '600' }}>📝 {examData.quiz_name}</h2>
+                    <div className="d-flex align-items-center gap-2 mb-2">
+                        <FileText size={24} style={{ color: BRAND_COLOR }} />
+                        <h2 className="mb-0" style={{ color: '#333', fontWeight: '600' }}>{examData.quiz_name}</h2>
+                    </div>
                     <p className="text-muted mb-2">{examData.subject_name}</p>
                     <div className="d-flex gap-3 flex-wrap">
                         <span className="badge" style={{ backgroundColor: BRAND_LIGHT, color: BRAND_COLOR, fontSize: '13px', padding: '6px 12px' }}>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { BookOpen, Award, TrendingUp, Calendar, Eye } from 'lucide-react';
+import { BookOpen, Award, TrendingUp, Calendar, Eye, BarChart3, PieChart as PieChartIcon, FileText } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
 import ExamReview from './ExamReview';
 
@@ -65,8 +65,11 @@ const Statistics = () => {
         <div className="container-xxl flex-grow-1 container-p-y" style={{ backgroundColor: '#fff' }}>
             {/* Header - Maktab brand rangi bilan */}
             <div className="mb-4 pb-3" style={{ borderBottom: `3px solid ${BRAND_COLOR}` }}>
-                <h2 style={{ color: '#333', fontWeight: '600' }}>📊 Mening Statistikam</h2>
-                <p className="text-muted mb-0">Barcha topshirgan testlarim va natijalarim</p>
+                <div className="d-flex align-items-center gap-2">
+                    <BarChart3 size={28} style={{ color: BRAND_COLOR }} />
+                    <h2 className="mb-0" style={{ color: '#333', fontWeight: '600' }}>Mening Statistikam</h2>
+                </div>
+                <p className="text-muted mb-0 mt-2">Barcha topshirgan testlarim va natijalarim</p>
             </div>
 
             {/* Statistics Cards - Professional Clean Design */}
@@ -116,9 +119,12 @@ const Statistics = () => {
                     <div className="col-lg-7">
                         <div className="card border-0 shadow-sm h-100">
                             <div className="card-header bg-white" style={{ borderBottom: `2px solid ${BRAND_LIGHT}` }}>
-                                <h5 className="mb-0" style={{ color: '#333', fontWeight: '600' }}>
-                                    📊 Fan Bo'yicha O'rtacha Ball
-                                </h5>
+                                <div className="d-flex align-items-center gap-2">
+                                    <BarChart3 size={20} style={{ color: BRAND_COLOR }} />
+                                    <h5 className="mb-0" style={{ color: '#333', fontWeight: '600' }}>
+                                        Fan Bo'yicha O'rtacha Ball
+                                    </h5>
+                                </div>
                             </div>
                             <div className="card-body">
                                 <ResponsiveContainer width="100%" height={280}>
@@ -158,9 +164,12 @@ const Statistics = () => {
                     <div className="col-lg-5">
                         <div className="card border-0 shadow-sm h-100">
                             <div className="card-header bg-white" style={{ borderBottom: `2px solid ${BRAND_LIGHT}` }}>
-                                <h5 className="mb-0" style={{ color: '#333', fontWeight: '600' }}>
-                                    🥧 Fanlar Taqsimoti
-                                </h5>
+                                <div className="d-flex align-items-center gap-2">
+                                    <PieChartIcon size={20} style={{ color: BRAND_COLOR }} />
+                                    <h5 className="mb-0" style={{ color: '#333', fontWeight: '600' }}>
+                                        Fanlar Taqsimoti
+                                    </h5>
+                                </div>
                             </div>
                             <div className="card-body d-flex align-items-center justify-content-center">
                                 <ResponsiveContainer width="100%" height={280}>
@@ -194,75 +203,161 @@ const Statistics = () => {
                 )}
             </div>
 
-            {/* Exam History Table - Mobile Optimized */}
+            {/* Exam History - Desktop Table + Mobile Cards */}
             <div className="card border-0 shadow-sm">
                 <div className="card-header bg-white" style={{ borderBottom: `2px solid ${BRAND_LIGHT}` }}>
-                    <h5 className="mb-0" style={{ color: '#333', fontWeight: '600' }}>
-                        📋 Topshirgan Testlarim
-                    </h5>
+                    <div className="d-flex align-items-center gap-2">
+                        <FileText size={20} style={{ color: BRAND_COLOR }} />
+                        <h5 className="mb-0" style={{ color: '#333', fontWeight: '600' }}>
+                            Topshirgan Testlarim
+                        </h5>
+                    </div>
                 </div>
                 <div className="card-body p-0">
                     {examHistory.length > 0 ? (
-                        <div className="table-responsive">
-                            <table className="table table-hover mb-0">
-                                <thead style={{ backgroundColor: BRAND_LIGHT }}>
-                                    <tr>
-                                        <th className="text-center d-none d-md-table-cell" style={{ color: '#666', fontWeight: '600', fontSize: '13px' }}>#</th>
-                                        <th style={{ color: '#666', fontWeight: '600', fontSize: '13px' }}>Test / Fan</th>
-                                        <th className="text-center" style={{ color: '#666', fontWeight: '600', fontSize: '13px' }}>Ball</th>
-                                        <th className="text-center" style={{ color: '#666', fontWeight: '600', fontSize: '13px' }}>Foiz</th>
-                                        <th className="text-center d-none d-lg-table-cell" style={{ color: '#666', fontWeight: '600', fontSize: '13px' }}>Sana</th>
-                                        <th className="text-center" style={{ color: '#666', fontWeight: '600', fontSize: '13px' }}>Harakatlar</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {examHistory.map((exam, index) => (
-                                        <tr key={exam.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                                            <td className="text-center text-muted d-none d-md-table-cell" style={{ fontSize: '13px' }}>
-                                                {index + 1}
-                                            </td>
-                                            <td>
-                                                <div style={{ color: '#333', fontWeight: '500', fontSize: '14px' }}>
+                        <>
+                            {/* Desktop Table - Hidden on mobile */}
+                            <div className="table-responsive d-none d-md-block">
+                                <table className="table table-hover mb-0">
+                                    <thead style={{ backgroundColor: BRAND_LIGHT }}>
+                                        <tr>
+                                            <th className="text-center" style={{ color: '#666', fontWeight: '600', fontSize: '13px' }}>#</th>
+                                            <th style={{ color: '#666', fontWeight: '600', fontSize: '13px' }}>Test Nomi</th>
+                                            <th className="text-center" style={{ color: '#666', fontWeight: '600', fontSize: '13px' }}>Fan</th>
+                                            <th className="text-center" style={{ color: '#666', fontWeight: '600', fontSize: '13px' }}>Ball</th>
+                                            <th className="text-center" style={{ color: '#666', fontWeight: '600', fontSize: '13px' }}>Foiz</th>
+                                            <th className="text-center" style={{ color: '#666', fontWeight: '600', fontSize: '13px' }}>Sana</th>
+                                            <th className="text-center" style={{ color: '#666', fontWeight: '600', fontSize: '13px' }}>Harakatlar</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {examHistory.map((exam, index) => (
+                                            <tr key={exam.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
+                                                <td className="text-center text-muted" style={{ fontSize: '13px' }}>
+                                                    {index + 1}
+                                                </td>
+                                                <td style={{ color: '#333', fontWeight: '500', fontSize: '14px' }}>
                                                     {exam.quiz_name}
+                                                </td>
+                                                <td className="text-center">
+                                                    <span
+                                                        className="badge"
+                                                        style={{
+                                                            backgroundColor: subjectStats.find(s => s.subject_id === exam.subject_id)?.color || '#999',
+                                                            color: '#fff',
+                                                            fontSize: '11px',
+                                                            padding: '4px 12px'
+                                                        }}
+                                                    >
+                                                        {exam.subject_name}
+                                                    </span>
+                                                </td>
+                                                <td className="text-center" style={{ fontWeight: '600', color: '#333', fontSize: '14px' }}>
+                                                    {exam.score}/{exam.total_questions}
+                                                </td>
+                                                <td className="text-center">
+                                                    <span
+                                                        className="badge"
+                                                        style={{
+                                                            backgroundColor: exam.percentage >= 80 ? '#10b981' :
+                                                                exam.percentage >= 60 ? '#f59e0b' : '#ef4444',
+                                                            color: '#fff',
+                                                            padding: '4px 10px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600'
+                                                        }}
+                                                    >
+                                                        {exam.percentage}%
+                                                    </span>
+                                                </td>
+                                                <td className="text-center text-muted" style={{ fontSize: '13px' }}>
+                                                    {new Date(exam.created_at).toLocaleDateString('uz-UZ', {
+                                                        day: '2-digit',
+                                                        month: '2-digit',
+                                                        year: 'numeric'
+                                                    })}
+                                                </td>
+                                                <td className="text-center">
+                                                    <button
+                                                        className="btn btn-sm"
+                                                        onClick={() => setSelectedExamId(exam.id)}
+                                                        style={{
+                                                            backgroundColor: BRAND_COLOR,
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            padding: '4px 12px',
+                                                            fontSize: '12px'
+                                                        }}
+                                                    >
+                                                        <Eye size={14} className="me-1" />
+                                                        Ko'rish
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Mobile Cards - Hidden on desktop */}
+                            <div className="d-md-none p-3">
+                                {examHistory.map((exam, index) => (
+                                    <div
+                                        key={exam.id}
+                                        className="card mb-3 border-0 shadow-sm"
+                                        style={{ borderLeft: `4px solid ${subjectStats.find(s => s.subject_id === exam.subject_id)?.color || BRAND_COLOR}` }}
+                                    >
+                                        <div className="card-body">
+                                            <div className="d-flex justify-content-between align-items-start mb-2">
+                                                <div className="flex-grow-1">
+                                                    <h6 className="mb-1" style={{ color: '#333', fontWeight: '600' }}>
+                                                        {exam.quiz_name}
+                                                    </h6>
+                                                    <span
+                                                        className="badge"
+                                                        style={{
+                                                            backgroundColor: subjectStats.find(s => s.subject_id === exam.subject_id)?.color || '#999',
+                                                            color: '#fff',
+                                                            fontSize: '10px',
+                                                            padding: '3px 8px'
+                                                        }}
+                                                    >
+                                                        {exam.subject_name}
+                                                    </span>
                                                 </div>
-                                                <span
-                                                    className="badge mt-1"
-                                                    style={{
-                                                        backgroundColor: subjectStats.find(s => s.subject_id === exam.subject_id)?.color || '#999',
-                                                        color: '#fff',
-                                                        fontSize: '10px',
-                                                        padding: '3px 8px'
-                                                    }}
-                                                >
-                                                    {exam.subject_name}
-                                                </span>
-                                            </td>
-                                            <td className="text-center" style={{ fontWeight: '600', color: '#333', fontSize: '14px' }}>
-                                                {exam.score}/{exam.total_questions}
-                                            </td>
-                                            <td className="text-center">
                                                 <span
                                                     className="badge"
                                                     style={{
                                                         backgroundColor: exam.percentage >= 80 ? '#10b981' :
                                                             exam.percentage >= 60 ? '#f59e0b' : '#ef4444',
                                                         color: '#fff',
-                                                        padding: '4px 10px',
-                                                        fontSize: '12px',
+                                                        padding: '6px 12px',
+                                                        fontSize: '13px',
                                                         fontWeight: '600'
                                                     }}
                                                 >
                                                     {exam.percentage}%
                                                 </span>
-                                            </td>
-                                            <td className="text-center text-muted d-none d-lg-table-cell" style={{ fontSize: '13px' }}>
-                                                {new Date(exam.created_at).toLocaleDateString('uz-UZ', {
-                                                    day: '2-digit',
-                                                    month: '2-digit',
-                                                    year: 'numeric'
-                                                })}
-                                            </td>
-                                            <td className="text-center">
+                                            </div>
+
+                                            <div className="d-flex justify-content-between align-items-center mt-3 pt-3" style={{ borderTop: '1px solid #f0f0f0' }}>
+                                                <div className="d-flex gap-3">
+                                                    <div>
+                                                        <small className="text-muted d-block" style={{ fontSize: '11px' }}>Ball</small>
+                                                        <strong style={{ color: '#333', fontSize: '14px' }}>
+                                                            {exam.score}/{exam.total_questions}
+                                                        </strong>
+                                                    </div>
+                                                    <div>
+                                                        <small className="text-muted d-block" style={{ fontSize: '11px' }}>Sana</small>
+                                                        <strong style={{ color: '#333', fontSize: '12px' }}>
+                                                            {new Date(exam.created_at).toLocaleDateString('uz-UZ', {
+                                                                day: '2-digit',
+                                                                month: '2-digit'
+                                                            })}
+                                                        </strong>
+                                                    </div>
+                                                </div>
                                                 <button
                                                     className="btn btn-sm"
                                                     onClick={() => setSelectedExamId(exam.id)}
@@ -270,19 +365,18 @@ const Statistics = () => {
                                                         backgroundColor: BRAND_COLOR,
                                                         color: '#fff',
                                                         border: 'none',
-                                                        padding: '4px 12px',
+                                                        padding: '6px 12px',
                                                         fontSize: '12px'
                                                     }}
                                                 >
-                                                    <Eye size={14} className="me-1" />
-                                                    Ko'rish
+                                                    <Eye size={14} />
                                                 </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
                     ) : (
                         <div className="text-center py-5">
                             <BookOpen size={64} style={{ color: '#e0e0e0' }} className="mb-3" />
