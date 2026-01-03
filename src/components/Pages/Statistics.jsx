@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { BookOpen, Award, TrendingUp, Calendar } from 'lucide-react';
+import { BookOpen, Award, TrendingUp, Calendar, Eye } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
+import ExamReview from './ExamReview';
 
 const Statistics = () => {
     const [examHistory, setExamHistory] = useState([]);
     const [subjectStats, setSubjectStats] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [selectedExamId, setSelectedExamId] = useState(null);
 
     // School brand color - Logo rangi
     const BRAND_COLOR = '#FF8C00';
@@ -52,6 +54,11 @@ const Statistics = () => {
                 <div className="spinner-border" style={{ color: BRAND_COLOR }} role="status"></div>
             </div>
         );
+    }
+
+    // Agar test tanlangan bo'lsa, ExamReview ko'rsatish
+    if (selectedExamId) {
+        return <ExamReview examId={selectedExamId} onClose={() => setSelectedExamId(null)} />;
     }
 
     return (
@@ -205,6 +212,7 @@ const Statistics = () => {
                                         <th className="text-center" style={{ color: '#666', fontWeight: '600', fontSize: '13px' }}>Ball</th>
                                         <th className="text-center" style={{ color: '#666', fontWeight: '600', fontSize: '13px' }}>Foiz</th>
                                         <th className="text-center d-none d-lg-table-cell" style={{ color: '#666', fontWeight: '600', fontSize: '13px' }}>Sana</th>
+                                        <th className="text-center" style={{ color: '#666', fontWeight: '600', fontSize: '13px' }}>Harakatlar</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -253,6 +261,22 @@ const Statistics = () => {
                                                     month: '2-digit',
                                                     year: 'numeric'
                                                 })}
+                                            </td>
+                                            <td className="text-center">
+                                                <button
+                                                    className="btn btn-sm"
+                                                    onClick={() => setSelectedExamId(exam.id)}
+                                                    style={{
+                                                        backgroundColor: BRAND_COLOR,
+                                                        color: '#fff',
+                                                        border: 'none',
+                                                        padding: '4px 12px',
+                                                        fontSize: '12px'
+                                                    }}
+                                                >
+                                                    <Eye size={14} className="me-1" />
+                                                    Ko'rish
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
