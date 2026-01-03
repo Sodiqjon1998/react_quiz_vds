@@ -11,19 +11,40 @@ const Leaderboard = () => {
     const [currentUserId, setCurrentUserId] = useState(null);
     const [totalStudents, setTotalStudents] = useState(0);
 
+    // Month filter state (default: current month)
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
     // School brand color
     const BRAND_COLOR = '#FF8C00';
     const BRAND_LIGHT = '#FFF4E6';
 
+    // Generate last 12 months for dropdown
+    const getMonths = () => {
+        const months = [];
+        const now = new Date();
+        for (let i = 0; i < 12; i++) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            months.push({
+                value: d.getMonth() + 1,
+                year: d.getFullYear(),
+                label: d.toLocaleDateString('uz-UZ', { year: 'numeric', month: 'long' })
+            });
+        }
+        return months;
+    };
+
+    const monthOptions = getMonths();
+
     useEffect(() => {
         fetchStudentRankings();
         fetchClassRankings();
-    }, []);
+    }, [selectedMonth, selectedYear]);
 
     const fetchStudentRankings = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${API_BASE_URL}/api/ranking/class`, {
+            const response = await fetch(`${API_BASE_URL}/api/ranking/class?month=${selectedMonth}&year=${selectedYear}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'application/json',
@@ -47,7 +68,7 @@ const Leaderboard = () => {
     const fetchClassRankings = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${API_BASE_URL}/api/ranking/class-rankings`, {
+            const response = await fetch(`${API_BASE_URL}/api/ranking/class-rankings?month=${selectedMonth}&year=${selectedYear}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'application/json',
@@ -88,9 +109,36 @@ const Leaderboard = () => {
         <div className="container-xxl flex-grow-1 container-p-y" style={{ backgroundColor: '#fff' }}>
             {/* Header */}
             <div className="mb-4 pb-3" style={{ borderBottom: `3px solid ${BRAND_COLOR}` }}>
-                <div className="d-flex align-items-center gap-2">
-                    <Trophy size={28} style={{ color: BRAND_COLOR }} />
-                    <h2 className="mb-0" style={{ color: '#333', fontWeight: '600' }}>Reytinglar</h2>
+                <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div className="d-flex align-items-center gap-2">
+                        <Trophy size={28} style={{ color: BRAND_COLOR }} />
+                        <h2 className="mb-0" style={{ color: '#333', fontWeight: '600' }}>Reytinglar</h2>
+                    </div>
+
+                    {/* Month Selector */}
+                    <div>
+                        <select
+                            className="form-select"
+                            value={`${selectedYear}-${selectedMonth}`}
+                            onChange={(e) => {
+                                const [year, month] = e.target.value.split('-');
+                                setSelectedYear(parseInt(year));
+                                setSelectedMonth(parseInt(month));
+                            }}
+                            style={{
+                                borderColor: BRAND_COLOR,
+                                color: '#333',
+                                fontSize: '14px',
+                                minWidth: '200px'
+                            }}
+                        >
+                            {monthOptions.map((option, index) => (
+                                <option key={index} value={`${option.year}-${option.value}`}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -362,7 +410,7 @@ const Leaderboard = () => {
                                                     <div style={{ fontWeight: '700', color: '#333', fontSize: '16px' }}>
                                                         {classData.total_exams}
                                                     </div>
-                                                    <small className="text-muted" style={{ fontSize: '11px' }}>Quizlar</small>
+                                                    <small className="text-muted" style={{ fontSize: '11px' }}>Testlar</small>
                                                 </div>
                                                 <div className="col-4">
                                                     <TrendingUp size={18} style={{ color: '#10b981' }} className="mb-1" />
