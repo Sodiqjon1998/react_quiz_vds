@@ -362,7 +362,7 @@ const Leaderboard = () => {
                                                     <div style={{ fontWeight: '700', color: '#333', fontSize: '16px' }}>
                                                         {classData.total_exams}
                                                     </div>
-                                                    <small className="text-muted" style={{ fontSize: '11px' }}>Testlar</small>
+                                                    <small className="text-muted" style={{ fontSize: '11px' }}>Quizlar</small>
                                                 </div>
                                                 <div className="col-4">
                                                     <TrendingUp size={18} style={{ color: '#10b981' }} className="mb-1" />
