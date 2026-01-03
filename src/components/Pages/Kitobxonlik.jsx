@@ -45,7 +45,7 @@ function Kitobxonlik() {
         };
     }, [isRecording]);
 
-    const sendToTelegram = async (studentName, bookTitle, audioFile = null) => {
+    const sendToTelegram = async (studentName, bookTitle, audioFile = null, durationSeconds = 0) => {
         const classInfo = userProfile?.class;
 
         if (!classInfo) {
@@ -54,7 +54,7 @@ function Kitobxonlik() {
         }
 
         const CHAT_ID = classInfo.telegram_chat_id;
-        const TOPIC_ID = classInfo.telegram_topic_id;
+        const TOPIC_ID = classInfo.reading_topic_id; // ✅ Kitobxonlik uchun reading_topic_id
 
         if (!CHAT_ID) {
             console.error('Telegram chat ID not found');
@@ -65,15 +65,21 @@ function Kitobxonlik() {
             day: 'numeric', month: 'long', year: 'numeric', weekday: 'long'
         });
 
+        const formatDuration = (seconds) => {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        };
+
         try {
-            // Agar audio fayl bo'lsa, uni Telegram ga yuborish
+            // Agar audio fayl bo'lsa, uni Telegram ga VOICE MESSAGE sifatida yuborish
             if (audioFile) {
-                const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendAudio`;
+                const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendVoice`; // ✅ sendVoice
                 const formData = new FormData();
 
                 formData.append('chat_id', CHAT_ID);
-                formData.append('audio', audioFile);
-                formData.append('caption', `📚 <b>Kitob O'qildi!</b>\n\n👤 <b>O'quvchi:</b> ${studentName}\n🏫 <b>Sinf:</b> ${classInfo.name}\n📖 <b>Kitob:</b> ${bookTitle}\n📅 <b>Sana:</b> ${date}\n\n✅ Kitob o'qildi!`);
+                formData.append('voice', audioFile); // ✅ 'voice' parameter
+                formData.append('caption', `📚 <b>Kitob O'qildi!</b>\n\n👤 <b>O'quvchi:</b> ${studentName}\n🏫 <b>Sinf:</b> ${classInfo.name}\n📖 <b>Kitob:</b> ${bookTitle}\n⏱ <b>Davomiyligi:</b> ${formatDuration(durationSeconds)}\n📅 <b>Sana:</b> ${date}`);
                 formData.append('parse_mode', 'HTML');
 
                 if (TOPIC_ID && TOPIC_ID !== '0' && TOPIC_ID !== 0) {
