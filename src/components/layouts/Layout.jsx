@@ -7,6 +7,8 @@ import DuelGame from '../quiz/DuelGame.jsx';
 import Kitobxonlik from '../pages/Kitobxonlik.jsx';
 import KunlikVazifalar from '../pages/KunlikVazifalar.jsx';
 import Profile from '../pages/Profile.jsx';
+import Leaderboard from '../pages/Leaderboard.jsx'; // ✅ Reytinglar
+import Statistics from '../pages/Statistics.jsx'; // ✅ Statistika
 
 function Layout({ user, onLogout }) {
     const [currentPage, setCurrentPage] = useState('dashboard');
@@ -82,6 +84,12 @@ function Layout({ user, onLogout }) {
                         onBack={handleQuizBack}
                     />
                 ) : <Dashboard user={user} />;
+
+            case 'reytinglar':
+                return <Leaderboard />;
+
+            case 'statistika':
+                return <Statistics />;
 
             case 'profil':
                 return <Profile />;

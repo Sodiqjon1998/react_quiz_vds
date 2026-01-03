@@ -2,7 +2,7 @@ import React from 'react';
 import {
   Home, BookOpen, Mic, CheckSquare,
   FileText, User, LogOut, X, Menu,
-  Swords, Trophy, Gamepad2
+  Swords, Trophy, Gamepad2, BarChart3
 } from 'lucide-react';
 
 function Sidebar({ currentPage, onNavigate, onLogout, isMobileMenuOpen, onCloseMobileMenu }) {
@@ -13,6 +13,8 @@ function Sidebar({ currentPage, onNavigate, onLogout, isMobileMenuOpen, onCloseM
     { id: 'musobaqa', icon: Gamepad2, label: 'Bilimlar Janggi' },
     { id: 'duel', icon: Swords, label: '1 vs 1 Duel' },
     { id: 'quiz', icon: FileText, label: 'Quiz' },
+    { id: 'reytinglar', icon: Trophy, label: '🏆 Reytinglar' },
+    { id: 'statistika', icon: BarChart3, label: '📊 Statistika' }, // ✅ Yangi
     { id: 'profil', icon: User, label: 'Profil' },
   ];
 
