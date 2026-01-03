@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, Award, Medal, TrendingUp, Users, School, BarChart3 } from 'lucide-react';
+import { Trophy, Award, Medal, TrendingUp, Users, School, BarChart3, BookOpen } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { API_BASE_URL } from '../../config';
 
@@ -315,7 +315,7 @@ const Leaderboard = () => {
                                     className="card h-100 border-0 shadow-sm"
                                     style={{
                                         borderLeft: index < 3 ? `4px solid ${index === 0 ? '#FFD700' :
-                                                index === 1 ? '#C0C0C0' : '#CD7F32'
+                                            index === 1 ? '#C0C0C0' : '#CD7F32'
                                             }` : `4px solid ${BRAND_COLOR}`
                                     }}
                                 >
@@ -349,20 +349,27 @@ const Leaderboard = () => {
                                         </div>
 
                                         <div className="border-top pt-3 mt-3">
-                                            <div className="row text-center">
-                                                <div className="col-6 border-end">
-                                                    <Award size={20} style={{ color: BRAND_COLOR }} className="mb-1" />
-                                                    <div style={{ fontWeight: '700', color: '#333', fontSize: '18px' }}>
+                                            <div className="row text-center g-2">
+                                                <div className="col-4">
+                                                    <Award size={18} style={{ color: BRAND_COLOR }} className="mb-1" />
+                                                    <div style={{ fontWeight: '700', color: '#333', fontSize: '16px' }}>
                                                         {classData.total_correct_answers}
                                                     </div>
-                                                    <small className="text-muted">To'g'ri javob</small>
+                                                    <small className="text-muted" style={{ fontSize: '11px' }}>To'g'ri</small>
                                                 </div>
-                                                <div className="col-6">
-                                                    <TrendingUp size={20} style={{ color: '#10b981' }} className="mb-1" />
-                                                    <div style={{ fontWeight: '700', color: '#333', fontSize: '18px' }}>
+                                                <div className="col-4">
+                                                    <BookOpen size={18} style={{ color: '#3b82f6' }} className="mb-1" />
+                                                    <div style={{ fontWeight: '700', color: '#333', fontSize: '16px' }}>
+                                                        {classData.total_exams}
+                                                    </div>
+                                                    <small className="text-muted" style={{ fontSize: '11px' }}>Testlar</small>
+                                                </div>
+                                                <div className="col-4">
+                                                    <TrendingUp size={18} style={{ color: '#10b981' }} className="mb-1" />
+                                                    <div style={{ fontWeight: '700', color: '#333', fontSize: '16px' }}>
                                                         {classData.average_score}
                                                     </div>
-                                                    <small className="text-muted">O'rtacha</small>
+                                                    <small className="text-muted" style={{ fontSize: '11px' }}>O'rtacha</small>
                                                 </div>
                                             </div>
                                         </div>
