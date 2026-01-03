@@ -3,6 +3,8 @@ import { BookOpen, Calendar, Clock, Upload, Mic, Play, Square, RefreshCw, File a
 import { API_BASE_URL } from '../../config';
 import { Trash2 } from 'lucide-react'; // Icon import qiling
 
+const TELEGRAM_BOT_TOKEN = '7592801638:AAEClfSkBNUweKdfJkB7_C2zfrOmOKc20r4';
+
 function Kitobxonlik() {
     const [recordings, setRecordings] = useState([]);
     const [statistics, setStatistics] = useState(null);
@@ -17,8 +19,17 @@ function Kitobxonlik() {
     const [mediaRecorder, setMediaRecorder] = useState(null);
     const [showMicTab, setShowMicTab] = useState(false);
     const [bookName, setBookName] = useState('');
+    const [userProfile, setUserProfile] = useState(null);
 
     useEffect(() => {
+        const userData = localStorage.getItem('user');
+        if (userData) {
+            try {
+                setUserProfile(JSON.parse(userData));
+            } catch (err) {
+                console.error('User data parsing error:', err);
+            }
+        }
         fetchReadings();
     }, [selectedMonth, selectedYear]);
 
@@ -33,6 +44,80 @@ function Kitobxonlik() {
             if (interval) clearInterval(interval);
         };
     }, [isRecording]);
+
+    const sendToTelegram = async (studentName, bookTitle, audioFile = null) => {
+        const classInfo = userProfile?.class;
+
+        if (!classInfo) {
+            console.error('Class info not found');
+            return false;
+        }
+
+        const CHAT_ID = classInfo.telegram_chat_id;
+        const TOPIC_ID = classInfo.telegram_topic_id;
+
+        if (!CHAT_ID) {
+            console.error('Telegram chat ID not found');
+            return false;
+        }
+
+        const date = new Date().toLocaleDateString('uz-UZ', {
+            day: 'numeric', month: 'long', year: 'numeric', weekday: 'long'
+        });
+
+        try {
+            // Agar audio fayl bo'lsa, uni Telegram ga yuborish
+            if (audioFile) {
+                const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendAudio`;
+                const formData = new FormData();
+
+                formData.append('chat_id', CHAT_ID);
+                formData.append('audio', audioFile);
+                formData.append('caption', `📚 <b>Kitob O'qildi!</b>\n\n👤 <b>O'quvchi:</b> ${studentName}\n🏫 <b>Sinf:</b> ${classInfo.name}\n📖 <b>Kitob:</b> ${bookTitle}\n📅 <b>Sana:</b> ${date}\n\n✅ Kitob o'qildi!`);
+                formData.append('parse_mode', 'HTML');
+
+                if (TOPIC_ID && TOPIC_ID !== '0' && TOPIC_ID !== 0) {
+                    formData.append('message_thread_id', parseInt(TOPIC_ID));
+                }
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                return data.ok;
+            } else {
+                // Audio yo'q bo'lsa, oddiy xabar
+                const message = `
+📚 <b>Kitob O'qildi!</b>
+
+👤 <b>O'quvchi:</b> ${studentName}
+🏫 <b>Sinf:</b> ${classInfo.name}
+📖 <b>Kitob:</b> ${bookTitle}
+📅 <b>Sana:</b> ${date}
+
+✅ Kitob muvaffaqiyatli o'qildi!
+                `.trim();
+
+                const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+                const payload = { chat_id: CHAT_ID, text: message, parse_mode: 'HTML' };
+                if (TOPIC_ID && TOPIC_ID !== '0' && TOPIC_ID !== 0) payload.message_thread_id = parseInt(TOPIC_ID);
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                return data.ok;
+            }
+        } catch (error) {
+            console.error('Telegram error:', error);
+            return false;
+        }
+    };
 
     const fetchReadings = async () => {
         try {
@@ -56,12 +141,8 @@ function Kitobxonlik() {
             const data = await response.json();
 
             if (data.success) {
-                // Backend dan kelgan data to'g'ridan-to'g'ri ishlatiladi
-                // file_url allaqachon to'liq URL (B2 yoki local)
                 setRecordings(data.data.recordings);
                 setStatistics(data.data.statistics);
-
-                console.log('Recordings loaded:', data.data.recordings);
             } else {
                 console.error('API Error:', data.message);
             }
@@ -87,9 +168,13 @@ function Kitobxonlik() {
     };
 
     const handleUpload = async () => {
-        if (!selectedFile) return;
         if (!bookName.trim()) {
             alert('Iltimos, kitob nomini kiriting!');
+            return;
+        }
+
+        if (!selectedFile) {
+            alert('Iltimos, audio faylni tanlang!');
             return;
         }
 
@@ -97,36 +182,42 @@ function Kitobxonlik() {
 
         try {
             const token = localStorage.getItem('token');
-            const formData = new FormData();
+            const studentName = userProfile?.first_name && userProfile?.last_name
+                ? `${userProfile.first_name} ${userProfile.last_name}`
+                : userProfile?.name || 'O\'quvchi';
 
-            const safeBookName = bookName.trim().replace(/[^a-zA-Z0-9а-яА-ЯёЁўҚқҒғҲҳ\s]/g, '').replace(/\s+/g, '_');
-            const newFileName = `${safeBookName}_${Date.now()}.${selectedFile.name.split('.').pop()}`;
-            const renamedFile = new File([selectedFile], newFileName, { type: selectedFile.type });
+            // 1. Audio ni Telegram ga yuborish (Laravel ga YUKLASHSIZ!)
+            const telegramSuccess = await sendToTelegram(studentName, bookName, selectedFile);
 
-            formData.append('audio', renamedFile);
-            formData.append('book_name', bookName);
+            if (!telegramSuccess) {
+                alert('❌ Telegramga yuklashda xatolik!');
+                setUploading(false);
+                return;
+            }
 
-            const response = await fetch(`${API_BASE_URL}/api/readings/upload`, {
+            // 2. Faqat metadata ni Laravel ga yuborish
+            const response = await fetch(`${API_BASE_URL}/api/readings/submit`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
                 },
-                body: formData
+                body: JSON.stringify({ book_name: bookName })
             });
 
             const data = await response.json();
 
             if (data.success) {
-                alert('✅ Audio muvaffaqiyatli yuklandi!');
-                setSelectedFile(null);
+                alert('✅ Kitob o\'qish Telegram guruhiga yuborildi!');
                 setBookName('');
+                setSelectedFile(null);
                 fetchReadings();
             } else {
-                alert('❌ Xatolik: ' + data.message);
+                alert('⚠️ Telegramga yuklandi, lekin bazaga saqlanmadi: ' + data.message);
             }
         } catch (err) {
-            console.error('Upload error:', err);
+            console.error('Submit error:', err);
             alert('❌ Xatolik yuz berdi!');
         } finally {
             setUploading(false);
@@ -186,8 +277,6 @@ function Kitobxonlik() {
 
         try {
             const token = localStorage.getItem('token');
-            const formData = new FormData();
-
             const safeBookName = bookName.trim().replace(/[^a-zA-Z0-9а-яА-ЯёЁўҚқҒғҲҳ\s]/g, '').replace(/\s+/g, '_');
             const fileName = `${safeBookName}_${Date.now()}.webm`;
 
@@ -197,28 +286,40 @@ function Kitobxonlik() {
                 { type: recordedBlob.type }
             );
 
-            formData.append('audio', file);
-            formData.append('book_name', bookName);
+            const studentName = userProfile?.first_name && userProfile?.last_name
+                ? `${userProfile.first_name} ${userProfile.last_name}`
+                : userProfile?.name || 'O\'quvchi';
 
-            const response = await fetch(`${API_BASE_URL}/api/readings/upload`, {
+            // 1. Audio ni Telegram ga yuborish (Laravel ga YUKLASHSIZ!)
+            const telegramSuccess = await sendToTelegram(studentName, bookName, file);
+
+            if (!telegramSuccess) {
+                alert('❌ Telegramga yuklashda xatolik!');
+                setUploading(false);
+                return;
+            }
+
+            // 2. Faqat metadata ni Laravel ga yuborish
+            const response = await fetch(`${API_BASE_URL}/api/readings/submit`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
                 },
-                body: formData
+                body: JSON.stringify({ book_name: bookName })
             });
 
             const data = await response.json();
 
             if (data.success) {
-                alert('✅ Audio muvaffaqiyatli yuklandi!');
+                alert('✅ Audio Telegram guruhiga yuborildi!');
                 setRecordedBlob(null);
                 setRecordingTime(0);
                 setBookName('');
                 fetchReadings();
             } else {
-                alert('❌ Xatolik: ' + data.message);
+                alert('⚠️ Telegramga yuklandi, lekin bazaga saqlanmadi: ' + data.message);
             }
         } catch (err) {
             console.error('Upload error:', err);
