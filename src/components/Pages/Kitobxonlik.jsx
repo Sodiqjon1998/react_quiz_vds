@@ -72,13 +72,13 @@ function Kitobxonlik() {
         };
 
         try {
-            // Agar audio fayl bo'lsa, uni Telegram ga VOICE MESSAGE sifatida yuborish
+            // Agar audio fayl bo'lsa, uni Telegram ga yuborish
             if (audioFile) {
-                const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendVoice`; // ✅ sendVoice
+                const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument`;
                 const formData = new FormData();
 
                 formData.append('chat_id', CHAT_ID);
-                formData.append('voice', audioFile); // ✅ 'voice' parameter
+                formData.append('document', audioFile);
                 formData.append('caption', `📚 <b>Kitob O'qildi!</b>\n\n👤 <b>O'quvchi:</b> ${studentName}\n🏫 <b>Sinf:</b> ${classInfo.name}\n📖 <b>Kitob:</b> ${bookTitle}\n⏱ <b>Davomiyligi:</b> ${formatDuration(durationSeconds)}\n📅 <b>Sana:</b> ${date}`);
                 formData.append('parse_mode', 'HTML');
 
