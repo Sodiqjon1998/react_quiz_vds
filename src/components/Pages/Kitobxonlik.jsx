@@ -188,42 +188,34 @@ function Kitobxonlik() {
 
         try {
             const token = localStorage.getItem('token');
-            const studentName = userProfile?.first_name && userProfile?.last_name
-                ? `${userProfile.first_name} ${userProfile.last_name}`
-                : userProfile?.name || 'O\'quvchi';
 
-            // 1. Audio ni Telegram ga yuborish (Laravel ga YUKLASHSIZ!)
-            const telegramSuccess = await sendToTelegram(studentName, bookName, selectedFile);
+            // FormData yaratish
+            const formData = new FormData();
+            formData.append('audio', selectedFile);
+            formData.append('book_name', bookName);
 
-            if (!telegramSuccess) {
-                alert('❌ Telegramga yuklashda xatolik!');
-                setUploading(false);
-                return;
-            }
-
-            // 2. Faqat metadata ni Laravel ga yuborish
-            const response = await fetch(`${API_BASE_URL}/api/readings/submit`, {
+            // Server ga yuborish (server convert qiladi va Telegram ga yuboradi)
+            const response = await fetch(`${API_BASE_URL}/api/readings/convert-upload`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'application/json',
-                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ book_name: bookName })
+                body: formData
             });
 
             const data = await response.json();
 
             if (data.success) {
-                alert('✅ Kitob o\'qish Telegram guruhiga yuborildi!');
+                alert('✅ Audio muvaffaqiyatli MP3 ga convert qilindi va Telegram ga yuborildi!');
                 setBookName('');
                 setSelectedFile(null);
                 fetchReadings();
             } else {
-                alert('⚠️ Telegramga yuklandi, lekin bazaga saqlanmadi: ' + data.message);
+                alert('❌ Xatolik: ' + data.message);
             }
         } catch (err) {
-            console.error('Submit error:', err);
+            console.error('Upload error:', err);
             alert('❌ Xatolik yuz berdi!');
         } finally {
             setUploading(false);
@@ -283,49 +275,36 @@ function Kitobxonlik() {
 
         try {
             const token = localStorage.getItem('token');
-            const safeBookName = bookName.trim().replace(/[^a-zA-Z0-9а-яА-ЯёЁўҚқҒғҲҳ\s]/g, '').replace(/\s+/g, '_');
+            const safeBookName = bookName.trim().replace(/[^a-zA-Z0-9а-яА-ЯёЁўҚқҒғҲҳ\\s]/g, '').replace(/\\s+/g, '_');
             const fileName = `${safeBookName}_${Date.now()}.webm`;
 
-            const file = new File(
-                [recordedBlob],
-                fileName,
-                { type: recordedBlob.type }
-            );
+            const file = new File([recordedBlob], fileName, { type: recordedBlob.type });
 
-            const studentName = userProfile?.first_name && userProfile?.last_name
-                ? `${userProfile.first_name} ${userProfile.last_name}`
-                : userProfile?.name || 'O\'quvchi';
+            // FormData yaratish
+            const formData = new FormData();
+            formData.append('audio', file);
+            formData.append('book_name', bookName);
 
-            // 1. Audio ni Telegram ga yuborish (Laravel ga YUKLASHSIZ!)
-            const telegramSuccess = await sendToTelegram(studentName, bookName, file);
-
-            if (!telegramSuccess) {
-                alert('❌ Telegramga yuklashda xatolik!');
-                setUploading(false);
-                return;
-            }
-
-            // 2. Faqat metadata ni Laravel ga yuborish
-            const response = await fetch(`${API_BASE_URL}/api/readings/submit`, {
+            // Server ga yuborish
+            const response = await fetch(`${API_BASE_URL}/api/readings/convert-upload`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'application/json',
-                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ book_name: bookName })
+                body: formData
             });
 
             const data = await response.json();
 
             if (data.success) {
-                alert('✅ Audio Telegram guruhiga yuborildi!');
+                alert('✅ Audio muvaffaqiyatli MP3 ga convert qilindi va Telegram ga yuborildi!');
+                setBookName('');
                 setRecordedBlob(null);
                 setRecordingTime(0);
-                setBookName('');
                 fetchReadings();
             } else {
-                alert('⚠️ Telegramga yuklandi, lekin bazaga saqlanmadi: ' + data.message);
+                alert('❌ Xatolik: ' + data.message);
             }
         } catch (err) {
             console.error('Upload error:', err);
@@ -334,9 +313,6 @@ function Kitobxonlik() {
             setUploading(false);
         }
     };
-
-
-
 
     // Delete funksiyasini qo'shing
     const handleDelete = async (id) => {
