@@ -244,22 +244,44 @@ function Kitobxonlik() {
             const chunks = [];
 
             recorder.ondataavailable = (e) => {
-                if (e.data.size > 0) chunks.push(e.data);
+                if (e.data.size > 0) {
+                    chunks.push(e.data);
+                    console.log('Audio chunk:', e.data.size, 'bytes');
+                }
             };
 
             recorder.onstop = () => {
                 const blob = new Blob(chunks, { type: options.mimeType });
+                console.log('Recording finished. Total size:', blob.size, 'bytes');
+
+                // Audio bo'sh emasligini tekshirish
+                if (blob.size < 1000) {
+                    alert('❌ Audio yozuv xato! Qayta urinib ko\'ring.');
+                    setRecordedBlob(null);
+                    return;
+                }
+
                 setRecordedBlob(blob);
                 stream.getTracks().forEach(track => track.stop());
+
+                // Test: audio ni mahalliy ijro etish
+                const audioURL = URL.createObjectURL(blob);
+                const audio = new Audio(audioURL);
+                console.log('Test audio playback...');
+                audio.play().catch(err => console.error('Audio play error:', err));
             };
 
-            recorder.start(1000);
+            recorder.start(100); // Har 100ms da chunk (to'liq audio uchun)
             setMediaRecorder(recorder);
             setIsRecording(true);
+            setRecordingTime(0);
+
         } catch (err) {
+            console.error('Mikrofon xatosi:', err);
             alert('❌ Mikrofonni yoqishda xatolik! Ruxsatlarni tekshiring.');
         }
     };
+
 
     const stopRecording = () => {
         if (mediaRecorder && isRecording) {
